@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import AuthModal from "@/components/AuthModal";
+import AppHeader from "@/components/AppHeader";
 import { createClient } from "@/lib/supabase/client";
 
 interface SavedRoute {
@@ -83,7 +84,7 @@ export default function SavedRoutesPage() {
   if (!authLoading && !user) {
     return (
       <main className="min-h-screen bg-gray-50">
-        <Header />
+        <AppHeader />
         <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
           <p className="text-gray-600">Sign in to view your saved routes.</p>
           <button
@@ -106,7 +107,7 @@ export default function SavedRoutesPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <Header />
+      <AppHeader />
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-5">
@@ -188,53 +189,3 @@ export default function SavedRoutesPage() {
   );
 }
 
-function Header() {
-  const { user, loading: authLoading, signOut } = useAuth();
-  const [showAuth, setShowAuth] = useState(false);
-
-  return (
-    <>
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center shrink-0">
-              <span className="text-white font-bold text-xs">TH</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">TrackHopper</span>
-          </Link>
-          <div className="flex items-center gap-2 shrink-0">
-            {!authLoading && user && (
-              <>
-                <span className="hidden sm:block text-xs text-gray-500 max-w-[140px] truncate">
-                  {user.email}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => signOut()}
-                  className="text-xs text-gray-500 hover:text-gray-800 underline"
-                >
-                  Sign out
-                </button>
-              </>
-            )}
-            {!authLoading && !user && (
-              <button
-                type="button"
-                onClick={() => setShowAuth(true)}
-                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
-              >
-                Sign in
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-      {showAuth && (
-        <AuthModal
-          onSuccess={() => setShowAuth(false)}
-          onClose={() => setShowAuth(false)}
-        />
-      )}
-    </>
-  );
-}
