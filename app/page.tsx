@@ -85,11 +85,54 @@ export default function HomePage() {
   const [disambigFrom, setDisambigFrom] = useState<StationMatch[] | null>(null);
   const [disambigTo, setDisambigTo] = useState<StationMatch[] | null>(null);
   const [pendingParsed, setPendingParsed] = useState<ParsedJourney | null>(null);
+  // When free-text has no origin, ask for it inline
+  const [needsOriginSearch, setNeedsOriginSearch] = useState(false);
+  const [originQuery, setOriginQuery] = useState("");
+  const [originResults, setOriginResults] = useState<StationMatch[]>([]);
+  const [originSearching, setOriginSearching] = useState(false);
 
   // results / status
   const [loading, setLoading] = useState<LoadingState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [journeys, setJourneys] = useState<Journey[] | null>(null);
+
+  // ── free-text submit ────────────────────────────────────────────────────
+
+  // ── origin search (when free-text gave no origin) ────────────────────────
+
+  async function searchOrigin(q: string) {
+    setOriginQuery(q);
+    if (q.trim().length < 2) { setOriginResults([]); return; }
+    setOriginSearching(true);
+    try {
+      const res = await fetch(`/api/stations/search?query=${encodeURIComponent(q.trim())}`);
+      const data = await res.json();
+      setOriginResults(data.matches ?? []);
+    } catch { /* ignore */ }
+    finally { setOriginSearching(false); }
+  }
+
+  async function confirmOrigin(station: StationMatch) {
+    if (!pendingParsed) return;
+    setNeedsOriginSearch(false);
+    setOriginQuery("");
+    setOriginResults([]);
+    const updated = { ...pendingParsed, from: station.id };
+    setPendingParsed(updated);
+
+    // Now proceed to plan (or disambig destination if needed)
+    if (disambigTo) return; // still waiting on destination disambig
+    setLoading("planning");
+    setError(null);
+    try {
+      const results = await planJourney(updated.from, updated.to, updated.arriveBy, updated.departAt);
+      setJourneys(results);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Journey planning failed");
+    } finally {
+      setLoading("idle");
+    }
+  }
 
   // ── free-text submit ────────────────────────────────────────────────────
 
@@ -100,6 +143,7 @@ export default function HomePage() {
     setDisambigFrom(null);
     setDisambigTo(null);
     setPendingParsed(null);
+    setNeedsOriginSearch(false);
 
     // 1. Parse the natural language
     setLoading("parsing");
@@ -134,11 +178,11 @@ export default function HomePage() {
       return;
     }
 
-    if (fromMatches.length === 0) {
-      const label = parsed.from === "current location"
-        ? "your current location (TfL needs a specific station name)"
-        : `"${parsed.from}"`;
-      setError(`Could not find a station matching ${label}. Try the structured form below.`);
+    if (fromMatches.length === 0 || parsed.from === "current location") {
+      // Instead of erroring, ask for the origin inline
+      setPendingParsed({ ...parsed, to: toMatches.length === 1 ? toMatches[0].id : parsed.to });
+      if (toMatches.length > 1) setDisambigTo(toMatches);
+      setNeedsOriginSearch(true);
       setLoading("idle");
       return;
     }
@@ -317,7 +361,7 @@ export default function HomePage() {
             <textarea
               value={freeText}
               onChange={(e) => setFreeText(e.target.value)}
-              placeholder="e.g. how do I get from Stratford to UEL by 9am"
+              placeholder="e.g. from Stratford to UEL by 9am, or from King's Cross to London Bridge"
               rows={2}
               className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm resize-none focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               onKeyDown={(e) => {
@@ -339,6 +383,49 @@ export default function HomePage() {
                 ? "Finding stations…"
                 : "Plan journey"}
             </button>
+
+            {/* Inline origin picker when free-text had no departure station */}
+            {needsOriginSearch && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-2">
+                <p className="text-sm font-medium text-blue-800">
+                  Where are you travelling <span className="underline">from</span>?
+                </p>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={originQuery}
+                    onChange={(e) => searchOrigin(e.target.value)}
+                    placeholder="e.g. Stratford, Mile End, Liverpool Street…"
+                    className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  {originSearching && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <svg className="h-4 w-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                      </svg>
+                    </span>
+                  )}
+                </div>
+                {originResults.length > 0 && (
+                  <ul className="space-y-1 max-h-48 overflow-y-auto">
+                    {originResults.slice(0, 6).map((s) => (
+                      <li key={s.id}>
+                        <button
+                          type="button"
+                          onClick={() => confirmOrigin(s)}
+                          className="w-full text-left text-sm px-3 py-1.5 rounded hover:bg-blue-100 text-blue-900 flex items-center gap-2"
+                        >
+                          <span className="text-xs text-blue-400 w-12 shrink-0 capitalize truncate">{s.modes[0] ?? "•"}</span>
+                          {s.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             {/* Disambiguation pickers */}
             {disambigFrom && (
