@@ -50,11 +50,12 @@ export default function StationAutocomplete({
       return;
     }
 
+    // 400ms debounce — /api/places/search calls Nominatim, don't hammer it
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
       try {
         const res = await fetch(
-          `/api/stations/search?query=${encodeURIComponent(raw.trim())}`
+          `/api/places/search?query=${encodeURIComponent(raw.trim())}`
         );
         const data = await res.json();
         if (data.matches) {
@@ -66,7 +67,7 @@ export default function StationAutocomplete({
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, 400);
   }
 
   function select(station: StationMatch) {
@@ -150,9 +151,9 @@ export default function StationAutocomplete({
             <li key={s.id}>
               <button
                 type="button"
-                className="w-full px-3 py-2.5 text-left text-sm hover:bg-blue-50 active:bg-blue-100 flex items-center gap-2"
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-blue-50 active:bg-blue-100 flex flex-col gap-0.5"
                 onMouseDown={(e) => {
-                  e.preventDefault(); // prevent input blur before select fires
+                  e.preventDefault();
                   select(s);
                 }}
                 onTouchEnd={(e) => {
@@ -160,10 +161,16 @@ export default function StationAutocomplete({
                   select(s);
                 }}
               >
-                <span className="shrink-0 w-14 text-xs text-gray-400 capitalize truncate">
-                  {s.modes[0] ?? "•"}
+                <span className="flex items-center gap-2">
+                  <span className="shrink-0 w-14 text-xs text-gray-400 capitalize truncate">
+                    {s.modes[0] ?? "•"}
+                  </span>
+                  <span className="font-medium text-gray-900">{s.name}</span>
                 </span>
-                <span>{s.name}</span>
+                {/* Landmark label — shown only when it differs from the station name */}
+                {s.label && s.label !== s.name && (
+                  <span className="pl-16 text-xs text-blue-600 truncate">{s.label}</span>
+                )}
               </button>
             </li>
           ))}

@@ -4,6 +4,11 @@ export interface StationMatch {
   id: string;
   name: string;
   modes: string[];
+  /** Set when result came from a landmark/place geocode — shown in dropdown */
+  label?: string;
+  /** lat/lon carried through for map use */
+  lat?: number;
+  lon?: number;
 }
 
 export interface ParsedJourney {

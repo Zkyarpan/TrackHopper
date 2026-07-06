@@ -14,8 +14,9 @@ type Mode = "freetext" | "structured";
 type LoadingState = "idle" | "parsing" | "searching" | "planning";
 
 async function searchStation(name: string): Promise<StationMatch[]> {
+  // Use /api/places/search so landmark names (e.g. "UEL Docklands") also resolve
   const res = await fetch(
-    `/api/stations/search?query=${encodeURIComponent(name)}`
+    `/api/places/search?query=${encodeURIComponent(name)}`
   );
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Station search failed");
@@ -138,7 +139,7 @@ function HomePage() {
     if (q.trim().length < 2) { setOriginResults([]); return; }
     setOriginSearching(true);
     try {
-      const res = await fetch(`/api/stations/search?query=${encodeURIComponent(q.trim())}`);
+      const res = await fetch(`/api/places/search?query=${encodeURIComponent(q.trim())}`);
       const data = await res.json();
       setOriginResults(data.matches ?? []);
     } catch { /* ignore */ }
