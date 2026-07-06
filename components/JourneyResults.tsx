@@ -1,10 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import type { Journey } from "@/lib/types";
 import { useAuth } from "@/components/AuthProvider";
 import AuthModal from "@/components/AuthModal";
 import { createClient } from "@/lib/supabase/client";
+
+// Leaflet requires window — load with no SSR
+const JourneyMap = dynamic(() => import("@/components/JourneyMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="mt-3 h-[260px] rounded-xl border border-gray-200 bg-gray-100 animate-pulse" />
+  ),
+});
 
 const MODE_LABELS: Record<string, string> = {
   tube: "Tube",
@@ -297,6 +306,9 @@ export default function JourneyResults({ journeys, savePayload }: Props) {
               </li>
             ))}
           </ol>
+
+          {/* Map — only rendered when TfL returned coordinates */}
+          <JourneyMap legs={journey.legs} />
         </div>
       ))}
     </div>

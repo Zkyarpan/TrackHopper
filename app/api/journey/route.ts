@@ -7,12 +7,13 @@ interface TflLeg {
   instruction?: { detailed?: string; summary?: string };
   mode?: { id?: string; name?: string };
   routeOptions?: Array<{ name?: string; lineIdentifier?: { name?: string } }>;
-  departurePoint?: { commonName?: string };
-  arrivalPoint?: { commonName?: string };
+  departurePoint?: { commonName?: string; lat?: number; lon?: number };
+  arrivalPoint?: { commonName?: string; lat?: number; lon?: number };
   departureTime?: string;
   arrivalTime?: string;
   path?: {
-    stopPoints?: Array<{ name?: string }>;
+    stopPoints?: Array<{ name?: string; lat?: number; lon?: number }>;
+    lineString?: string; // TfL encoded polyline
   };
 }
 
@@ -30,6 +31,17 @@ interface TflJourneyResponse {
   message?: string;
 }
 
+function parseLineString(lineString?: string): Array<{ lat: number; lon: number }> {
+  if (!lineString) return [];
+  try {
+    // TfL lineString is JSON array of [lon, lat] pairs
+    const pairs: [number, number][] = JSON.parse(lineString);
+    return pairs.map(([lon, lat]) => ({ lat, lon }));
+  } catch {
+    return [];
+  }
+}
+
 function formatLeg(leg: TflLeg) {
   const modeId = leg.mode?.id ?? "unknown";
   const lineName =
@@ -45,8 +57,13 @@ function formatLeg(leg: TflLeg) {
       leg.instruction?.detailed ?? leg.instruction?.summary ?? "",
     from: leg.departurePoint?.commonName ?? "",
     to: leg.arrivalPoint?.commonName ?? "",
+    fromLat: leg.departurePoint?.lat,
+    fromLon: leg.departurePoint?.lon,
+    toLat: leg.arrivalPoint?.lat,
+    toLon: leg.arrivalPoint?.lon,
     departureTime: leg.departureTime ?? null,
     arrivalTime: leg.arrivalTime ?? null,
+    path: parseLineString(leg.path?.lineString),
   };
 }
 

@@ -25,8 +25,14 @@ export interface JourneyLeg {
   instruction: string;
   from: string;
   to: string;
+  fromLat?: number;
+  fromLon?: number;
+  toLat?: number;
+  toLon?: number;
   departureTime: string | null;
   arrivalTime: string | null;
+  /** Intermediate path points for polyline rendering */
+  path?: Array<{ lat: number; lon: number }>;
 }
 
 export interface Journey {
