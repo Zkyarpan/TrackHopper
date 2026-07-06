@@ -7,6 +7,7 @@ import StationAutocomplete from "@/components/StationAutocomplete";
 import JourneyResults from "@/components/JourneyResults";
 import LineStatusBanner from "@/components/LineStatusBanner";
 import AppHeader from "@/components/AppHeader";
+import { useGeolocation, type GeoState } from "@/lib/useGeolocation";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,60 @@ function DisambiguationPicker({ label, matches, onSelect }: DisambiguateProps) {
   );
 }
 
+// ─── geo button ──────────────────────────────────────────────────────────────
+
+
+
+function GeoButton({ geo, onLocate, onReset }: { geo: GeoState; onLocate: () => void; onReset: () => void }) {
+  if (geo.status === "done") {
+    return (
+      <button
+        type="button"
+        onClick={onReset}
+        className="inline-flex items-center gap-1 text-xs text-green-600 hover:text-green-800"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        {geo.station.name} ✕
+      </button>
+    );
+  }
+  if (geo.status === "error") {
+    return (
+      <span className="text-xs text-red-500 flex items-center gap-1">
+        <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+        </svg>
+        {geo.message}
+      </span>
+    );
+  }
+  const busy = geo.status === "locating" || geo.status === "resolving";
+  return (
+    <button
+      type="button"
+      onClick={onLocate}
+      disabled={busy}
+      className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 disabled:opacity-50 transition-colors"
+    >
+      {busy ? (
+        <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+        </svg>
+      ) : (
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      )}
+      {geo.status === "locating" ? "Getting location…" : geo.status === "resolving" ? "Finding nearest station…" : "Use my location"}
+    </button>
+  );
+}
+
 // ─── main page ───────────────────────────────────────────────────────────────
 
 function HomePage() {
@@ -104,6 +159,23 @@ function HomePage() {
     fromStationId: string; fromStationName: string;
     toStationId: string; toStationName: string;
   } | null>(null);
+
+  // geolocation
+  const { geo, locate, reset: resetGeo } = useGeolocation();
+  // When geo resolves, pre-fill the "from" input in the active mode
+  useEffect(() => {
+    if (geo.status !== "done") return;
+    if (mode === "structured") {
+      setStructFrom(geo.station);
+    } else {
+      // In free-text mode, inject the station name into the text area
+      setFreeText((prev) => {
+        const prefix = `from ${geo.station.name} `;
+        if (prev.startsWith("from ")) return prev; // already has origin
+        return prefix + prev;
+      });
+    }
+  }, [geo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── re-run from saved routes (query params) ──────────────────────────────
 
@@ -388,9 +460,12 @@ function HomePage() {
         {/* Free-text panel */}
         {mode === "freetext" && (
           <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-            <label className="block text-sm font-medium text-gray-700">
-              Where do you want to go?
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-gray-700">
+                Where do you want to go?
+              </label>
+              <GeoButton geo={geo} onLocate={locate} onReset={resetGeo} />
+            </div>
             <textarea
               value={freeText}
               onChange={(e) => setFreeText(e.target.value)}
@@ -481,12 +556,17 @@ function HomePage() {
         {/* Structured form panel */}
         {mode === "structured" && (
           <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
-            <StationAutocomplete
-              label="From"
-              placeholder="Departure station"
-              value={structFrom}
-              onChange={setStructFrom}
-            />
+            <div>
+              <StationAutocomplete
+                label="From"
+                placeholder="Departure station"
+                value={structFrom}
+                onChange={setStructFrom}
+              />
+              <div className="mt-1.5">
+                <GeoButton geo={geo} onLocate={locate} onReset={resetGeo} />
+              </div>
+            </div>
             <StationAutocomplete
               label="To"
               placeholder="Destination station"
