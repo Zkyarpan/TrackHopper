@@ -24,7 +24,22 @@ function avatarColor(str: string): string {
   return colours[Math.abs(hash) % colours.length];
 }
 
-function initials(user: { email?: string | null; user_metadata?: { full_name?: string; name?: string } }): string {
+type UserMeta = {
+  email?: string | null;
+  id?: string;
+  user_metadata?: {
+    full_name?: string;
+    name?: string;
+    avatar_url?: string;
+    picture?: string;
+  };
+};
+
+function avatarUrl(user: UserMeta): string | null {
+  return user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null;
+}
+
+function initials(user: UserMeta): string {
   const name = user.user_metadata?.full_name ?? user.user_metadata?.name;
   if (name) {
     const parts = name.trim().split(/\s+/);
@@ -36,7 +51,7 @@ function initials(user: { email?: string | null; user_metadata?: { full_name?: s
   return email.slice(0, 1).toUpperCase() || "?";
 }
 
-function displayName(user: { email?: string | null; user_metadata?: { full_name?: string; name?: string } }): string {
+function displayName(user: UserMeta): string {
   const name = user.user_metadata?.full_name ?? user.user_metadata?.name;
   if (name) return name.trim();
   const email = user.email ?? "";
@@ -96,14 +111,24 @@ export default function AppHeader() {
                   className="flex items-center gap-2 rounded-lg px-1.5 py-1 hover:bg-gray-50 transition-colors"
                   aria-label="Account menu"
                 >
-                  {/* Initials avatar */}
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${avatarColor(user.email ?? user.id)}`}
-                  >
-                    <span className="text-white font-bold text-xs">
-                      {initials(user)}
-                    </span>
-                  </div>
+                  {/* Avatar — real photo if available, else initials */}
+                  {avatarUrl(user) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarUrl(user)!}
+                      alt={displayName(user)}
+                      className="w-8 h-8 rounded-full shrink-0 object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${avatarColor(user.email ?? user.id ?? "")}`}
+                    >
+                      <span className="text-white font-bold text-xs">
+                        {initials(user)}
+                      </span>
+                    </div>
+                  )}
                   {/* Name — hidden on mobile */}
                   <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
                     {displayName(user)}
@@ -124,13 +149,32 @@ export default function AppHeader() {
                 {dropdownOpen && (
                   <div className="absolute right-0 top-full mt-1.5 w-52 rounded-xl border border-gray-200 bg-white shadow-lg py-1 z-30">
                     {/* User info */}
-                    <div className="px-3 py-2 border-b border-gray-100">
-                      <p className="text-xs font-medium text-gray-900 truncate">
-                        {displayName(user)}
-                      </p>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">
-                        {user.email}
-                      </p>
+                    <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2.5">
+                      {avatarUrl(user) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={avatarUrl(user)!}
+                          alt={displayName(user)}
+                          className="w-8 h-8 rounded-full shrink-0 object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${avatarColor(user.email ?? user.id ?? "")}`}
+                        >
+                          <span className="text-white font-bold text-xs">
+                            {initials(user)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-gray-900 truncate">
+                          {displayName(user)}
+                        </p>
+                        <p className="text-xs text-gray-400 truncate mt-0.5">
+                          {user.email}
+                        </p>
+                      </div>
                     </div>
                     {/* Saved routes */}
                     <Link
