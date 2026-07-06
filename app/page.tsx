@@ -8,6 +8,7 @@ import JourneyResults from "@/components/JourneyResults";
 import LineStatusBanner from "@/components/LineStatusBanner";
 import AppHeader from "@/components/AppHeader";
 import { useGeolocation, type GeoState } from "@/lib/useGeolocation";
+import NearbySuggestions from "@/components/NearbySuggestions";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -456,6 +457,34 @@ function HomePage() {
             Choose stations
           </button>
         </div>
+
+        {/* Nearby suggestions — shown only after location is granted */}
+        {geo.status === "done" && (
+          <NearbySuggestions
+            lat={geo.lat}
+            lon={geo.lon}
+            onSelectFrom={(station) => {
+              setStructFrom(station);
+              setMode("structured");
+            }}
+            onRunSavedRoute={(from, to) => {
+              setStructFrom(from);
+              setStructTo(to);
+              setMode("structured");
+              setSavePayload({
+                fromStationId: from.id, fromStationName: from.name,
+                toStationId: to.id, toStationName: to.name,
+              });
+              setError(null);
+              setJourneys(null);
+              setLoading("planning");
+              planJourney(from.id, to.id, null, null)
+                .then((results) => setJourneys(results))
+                .catch((e) => setError(e instanceof Error ? e.message : "Journey planning failed"))
+                .finally(() => setLoading("idle"));
+            }}
+          />
+        )}
 
         {/* Free-text panel */}
         {mode === "freetext" && (
