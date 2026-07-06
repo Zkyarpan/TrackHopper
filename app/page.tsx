@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, Suspense } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { StationMatch, Journey, ParsedJourney } from "@/lib/types";
 import StationAutocomplete from "@/components/StationAutocomplete";
 import JourneyResults from "@/components/JourneyResults";
 import LineStatusBanner from "@/components/LineStatusBanner";
+import AuthModal from "@/components/AuthModal";
+import { useAuth } from "@/components/AuthProvider";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -69,7 +73,8 @@ function DisambiguationPicker({ label, matches, onSelect }: DisambiguateProps) {
 
 // ─── main page ───────────────────────────────────────────────────────────────
 
-export default function HomePage() {
+function HomePage() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>("freetext");
 
   // free-text state
@@ -95,6 +100,40 @@ export default function HomePage() {
   const [loading, setLoading] = useState<LoadingState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [journeys, setJourneys] = useState<Journey[] | null>(null);
+  // save payload — the resolved station names/ids to pass to save button
+  const [savePayload, setSavePayload] = useState<{
+    fromStationId: string; fromStationName: string;
+    toStationId: string; toStationName: string;
+  } | null>(null);
+
+  // auth modal (sign-in from header)
+  const [showHeaderAuth, setShowHeaderAuth] = useState(false);
+  const { user, loading: authLoading, signOut } = useAuth();
+
+  // ── re-run from saved routes (query params) ──────────────────────────────
+
+  useEffect(() => {
+    const fromId = searchParams.get("fromId");
+    const fromName = searchParams.get("fromName");
+    const toId = searchParams.get("toId");
+    const toName = searchParams.get("toName");
+    if (!fromId || !fromName || !toId || !toName) return;
+
+    const from: StationMatch = { id: fromId, name: fromName, modes: [] };
+    const to: StationMatch = { id: toId, name: toName, modes: [] };
+    setMode("structured");
+    setStructFrom(from);
+    setStructTo(to);
+    setSavePayload({ fromStationId: fromId, fromStationName: fromName, toStationId: toId, toStationName: toName });
+    // Immediately trigger the journey plan
+    setError(null);
+    setJourneys(null);
+    setLoading("planning");
+    planJourney(fromId, toId, null, null)
+      .then((results) => setJourneys(results))
+      .catch((e) => setError(e instanceof Error ? e.message : "Journey planning failed"))
+      .finally(() => setLoading("idle"));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── free-text submit ────────────────────────────────────────────────────
 
@@ -118,6 +157,8 @@ export default function HomePage() {
     setOriginQuery("");
     setOriginResults([]);
     const updated = { ...pendingParsed, from: station.id };
+    // Store the origin station name for saving
+    setSavePayload((prev) => prev ? { ...prev, fromStationId: station.id, fromStationName: station.name } : null);
     setPendingParsed(updated);
 
     // Now proceed to plan (or disambig destination if needed)
@@ -140,6 +181,7 @@ export default function HomePage() {
     if (!freeText.trim()) return;
     setError(null);
     setJourneys(null);
+    setSavePayload(null);
     setDisambigFrom(null);
     setDisambigTo(null);
     setPendingParsed(null);
@@ -217,6 +259,10 @@ export default function HomePage() {
     }
 
     // 4. All resolved — plan
+    setSavePayload({
+      fromStationId: fromMatches[0].id, fromStationName: fromMatches[0].name,
+      toStationId: toMatches[0].id, toStationName: toMatches[0].name,
+    });
     setLoading("planning");
     try {
       const results = await planJourney(
@@ -257,6 +303,9 @@ export default function HomePage() {
       // Both resolved — plan journey
       setLoading("planning");
       setError(null);
+      // We don't have station names at this point (only IDs from parsed),
+      // so clear savePayload — user can still save from structured form.
+      setSavePayload(null);
       try {
         const results = await planJourney(
           updatedParsed.from,
@@ -283,6 +332,10 @@ export default function HomePage() {
     }
     setError(null);
     setJourneys(null);
+    setSavePayload({
+      fromStationId: structFrom.id, fromStationName: structFrom.name,
+      toStationId: structTo.id, toStationName: structTo.name,
+    });
     setLoading("planning");
     try {
       const results = await planJourney(
@@ -306,21 +359,66 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
+      <header className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center shrink-0">
             <span className="text-white font-bold text-xs">TH</span>
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-900 leading-none">
               TrackHopper
             </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              London journey planner
-            </p>
+            <p className="text-xs text-gray-500 mt-0.5">London journey planner</p>
+          </div>
+          {/* Auth + nav */}
+          <div className="flex items-center gap-2 shrink-0">
+            {!authLoading && (
+              <>
+                {user ? (
+                  <>
+                    <Link
+                      href="/saved-routes"
+                      className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                      Saved
+                    </Link>
+                    <div className="flex items-center gap-1">
+                      <span className="hidden sm:block text-xs text-gray-500 max-w-[120px] truncate">
+                        {user.email}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => signOut()}
+                        className="text-xs text-gray-500 hover:text-gray-800 underline ml-1"
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowHeaderAuth(true)}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                  >
+                    Sign in
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </header>
+
+      {showHeaderAuth && (
+        <AuthModal
+          onSuccess={() => setShowHeaderAuth(false)}
+          onClose={() => setShowHeaderAuth(false)}
+        />
+      )}
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
         {/* Line status banner */}
@@ -543,7 +641,7 @@ export default function HomePage() {
 
         {/* Results */}
         {journeys !== null && journeys.length > 0 && (
-          <JourneyResults journeys={journeys} />
+          <JourneyResults journeys={journeys} savePayload={savePayload ?? undefined} />
         )}
         {journeys !== null && journeys.length === 0 && (
           <div className="rounded-lg border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
@@ -552,5 +650,14 @@ export default function HomePage() {
         )}
       </div>
     </main>
+  );
+}
+
+// Wrap with Suspense because useSearchParams() requires it in the App Router
+export default function Page() {
+  return (
+    <Suspense>
+      <HomePage />
+    </Suspense>
   );
 }
