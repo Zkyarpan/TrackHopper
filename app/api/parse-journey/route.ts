@@ -17,13 +17,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const systemPrompt = `You are a journey parser. Extract journey details from natural language.
+  const systemPrompt = `You are a journey parser for London public transport. Extract journey details from natural language.
 Return ONLY valid JSON with no extra text, no markdown, no code fences — just raw JSON.
 The JSON must have exactly this shape:
 {"from": string, "to": string, "arriveBy": string|null, "departAt": string|null}
-- "from" and "to" are station or place names as the user said them
-- "arriveBy" and "departAt" are times in HH:MM 24h format if mentioned, otherwise null
-- Never include anything outside the JSON object`;
+Rules:
+- "from" is the origin station or place. If the user only mentions a destination (e.g. "I want to go to X"), set "from" to "current location".
+- "to" is the destination station or place.
+- "arriveBy" and "departAt" are times in HH:MM 24h format if mentioned, otherwise null.
+- Never leave "from" or "to" as an empty string — use "current location" if the origin is unknown.
+- Never include anything outside the JSON object.`;
 
   let rawText = "";
   try {
@@ -84,9 +87,25 @@ The JSON must have exactly this shape:
     );
   }
 
+  const fromVal = parsed.from.trim();
+  const toVal = parsed.to.trim();
+
+  if (!fromVal) {
+    return Response.json(
+      { error: "No origin found in your query. Please include where you're travelling from (e.g. \"from Stratford to UEL\")." },
+      { status: 422 }
+    );
+  }
+  if (!toVal) {
+    return Response.json(
+      { error: "No destination found in your query. Please include where you want to go." },
+      { status: 422 }
+    );
+  }
+
   return Response.json({
-    from: parsed.from,
-    to: parsed.to,
+    from: fromVal,
+    to: toVal,
     arriveBy: typeof parsed.arriveBy === "string" ? parsed.arriveBy : null,
     departAt: typeof parsed.departAt === "string" ? parsed.departAt : null,
   });

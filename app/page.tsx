@@ -135,12 +135,15 @@ export default function HomePage() {
     }
 
     if (fromMatches.length === 0) {
-      setError(`Could not find station matching "${parsed.from}". Try the structured form below.`);
+      const label = parsed.from === "current location"
+        ? "your current location (TfL needs a specific station name)"
+        : `"${parsed.from}"`;
+      setError(`Could not find a station matching ${label}. Try the structured form below.`);
       setLoading("idle");
       return;
     }
     if (toMatches.length === 0) {
-      setError(`Could not find station matching "${parsed.to}". Try the structured form below.`);
+      setError(`Could not find a station matching "${parsed.to}". Try the structured form below.`);
       setLoading("idle");
       return;
     }
