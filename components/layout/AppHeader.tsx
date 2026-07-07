@@ -2,26 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import {
-  BookmarkIcon,
-  LogOutIcon,
-  ShieldIcon,
-  TrainFront,
-} from "lucide-react";
-
+import { BookmarkIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-
 import AuthModal from "@/components/auth/AuthModal";
 import MobileNav from "@/components/layout/MobileNav";
-
 import { Button } from "@/components/ui/button";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
-
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -31,105 +18,61 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-
-import {
-  avatarColor,
-  avatarUrl,
-  displayName,
-  initials,
-} from "@/lib/user";
+import { avatarColor, avatarUrl, displayName, initials } from "@/lib/user";
 
 export default function AppHeader() {
   const { user, loading: authLoading, signOut } = useAuth();
   const isAdmin = useIsAdmin();
-
   const [showAuth, setShowAuth] = useState(false);
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/75 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          {/* Logo */}
-          <div className="flex items-center gap-10">
-            <Link
-              href="/"
-              className="group flex items-center gap-3"
-            >
-              <div
-                className="
-                  flex h-11 w-11 items-center justify-center
-                  rounded-xl
-                  bg-gradient-to-br
-                  from-red-500
-                  via-red-600
-                  to-red-700
-                  shadow-lg
-                  shadow-red-500/20
-                  transition-all
-                  duration-300
-                  group-hover:scale-110
-                  group-hover:rotate-6
-                "
-              >
-                <TrainFront className="h-5 w-5 text-white" />
-              </div>
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
+          {/* Brand */}
+          <Link
+            href="/"
+            className="group flex items-center gap-3 transition-opacity hover:opacity-80"
+          >
+            {/* Logo mark — a stylised track/rail roundel */}
+            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center">
+              {/* Outer ring */}
+              <div className="absolute inset-0 rounded-full border-[2.5px] border-red-600" />
+              {/* Crossbar */}
+              <div className="absolute inset-x-0 top-1/2 h-[18px] -translate-y-1/2 bg-red-600" />
+              <span className="relative z-10 text-[11px] font-extrabold tracking-tight text-white">
+                TH
+              </span>
+            </div>
 
-              <div className="leading-tight">
-                <h1 className="text-lg font-bold tracking-tight">
-                  TrackHopper
-                </h1>
+            <div className="min-w-0 leading-none">
+              <p className="truncate text-[17px] font-semibold tracking-[-0.02em]">
+                TrackHopper
+              </p>
+              <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                London journey planner
+              </p>
+            </div>
+          </Link>
 
-                <p className="text-xs text-muted-foreground">
-                  Smart London Journey Planner
-                </p>
-              </div>
-            </Link>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-7">
-            
-
-              {user && (
-                <Link
-                  href="/saved-routes"
-                  className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
-                >
-                  Saved Routes
-                </Link>
-              )}
-
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
-                >
-                  Admin
-                </Link>
-              )}
-            </nav>
-          </div>
-
-          {/* Right Side */}
-          <div className="flex items-center gap-3">
+          {/* Actions */}
+          <div className="flex items-center gap-2">
             {authLoading ? (
-              <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
+              <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
             ) : (
               <>
                 {/* Desktop */}
-                <div className="hidden sm:flex items-center gap-3">
+                <div className="hidden sm:flex sm:items-center sm:gap-1.5">
                   {user ? (
                     <>
+                      {/* Quick-access saved routes */}
                       <Button
-                        
                         variant="ghost"
                         size="icon"
-                        className="rounded-full"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
                       >
-                        <Link
-                          href="/saved-routes"
-                          aria-label="Saved Routes"
-                        >
-                          <BookmarkIcon className="h-5 w-5" />
+                        <Link href="/saved-routes" aria-label="Saved routes">
+                          <BookmarkIcon className="h-4 w-4" />
                         </Link>
                       </Button>
 
@@ -138,14 +81,7 @@ export default function AppHeader() {
                           render={
                             <Button
                               variant="ghost"
-                              className="
-                                h-11
-                                rounded-full
-                                pl-1
-                                pr-3
-                                transition-all
-                                hover:bg-accent
-                              "
+                              className="h-8 gap-2 rounded-full pl-1 pr-2.5 hover:bg-accent"
                             />
                           }
                         >
@@ -156,81 +92,60 @@ export default function AppHeader() {
                                 alt={displayName(user)}
                               />
                             )}
-
                             <AvatarFallback
                               className={avatarColor(
-                                user.email ?? user.id ?? ""
+                                user.email ?? user.id ?? "",
                               )}
                             >
-                              <span className="text-xs text-white">
+                              <span className="text-white text-xs">
                                 {initials(user)}
                               </span>
                             </AvatarFallback>
                           </Avatar>
-
-                          <span className="max-w-[140px] truncate text-sm font-medium">
+                          <span className="max-w-[100px] truncate text-sm font-medium">
                             {displayName(user)}
                           </span>
                         </DropdownMenuTrigger>
 
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-60 rounded-xl"
-                        >
+                        <DropdownMenuContent align="end" className="w-52">
                           <DropdownMenuGroup>
                             <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
                               {user.email}
                             </DropdownMenuLabel>
                           </DropdownMenuGroup>
-
                           <DropdownMenuSeparator />
-
                           <DropdownMenuItem
                             render={<Link href="/saved-routes" />}
                           >
-                            <BookmarkIcon className="mr-2 h-4 w-4" />
-                            Saved Routes
+                            <BookmarkIcon />
+                            Saved routes
                           </DropdownMenuItem>
-
                           {isAdmin && (
-                            <DropdownMenuItem
-                              render={<Link href="/admin" />}
-                            >
-                              <ShieldIcon className="mr-2 h-4 w-4" />
-                              Admin Dashboard
+                            <DropdownMenuItem render={<Link href="/admin" />}>
+                              <ShieldIcon />
+                              Admin
                             </DropdownMenuItem>
                           )}
-
                           <DropdownMenuSeparator />
-
                           <DropdownMenuItem
                             variant="destructive"
-                            onClick={signOut}
+                            onClick={() => signOut()}
                           >
-                            <LogOutIcon className="mr-2 h-4 w-4" />
-                            Sign Out
+                            <LogOutIcon />
+                            Sign out
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </>
                   ) : (
                     <Button
-                      onClick={() => setShowAuth(true)}
-                      className="
-                        rounded-full
-                        px-5
-                        font-medium
-                        bg-red-600
-                        text-white
-                        shadow-lg
-                        shadow-red-500/20
-                        transition-all
-                        duration-300
-                        hover:bg-red-700
-                        hover:scale-105
+                      size="sm"
+                      className="cursor-pointer h-8    rounded-full bg-red-600 px-4 text-xs  text-white shadow-none   
+                      hover:bg-red-700
                       "
+                      onClick={() => setShowAuth(true)}
                     >
-                      Sign In
+                      Sign in
                     </Button>
                   )}
                 </div>
@@ -259,3 +174,4 @@ export default function AppHeader() {
     </>
   );
 }
+
