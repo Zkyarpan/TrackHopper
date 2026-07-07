@@ -17,16 +17,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const systemPrompt = `You are a journey parser for London public transport. Extract journey details from natural language.
+  const systemPrompt = `You are a journey parser for London public transport. Extract journey details from natural language input.
 Return ONLY valid JSON with no extra text, no markdown, no code fences — just raw JSON.
 The JSON must have exactly this shape:
 {"from": string, "to": string, "arriveBy": string|null, "departAt": string|null}
+
 Rules:
-- "from" is the origin station or place. If the user only mentions a destination (e.g. "I want to go to X"), set "from" to "current location".
-- "to" is the destination station or place.
+- "from" is the origin station or place name. If the user only mentions a destination (e.g. "I want to go to X"), set "from" to "current location".
+- "to" is the destination station or place name.
 - "arriveBy" and "departAt" are times in HH:MM 24h format if mentioned, otherwise null.
 - Never leave "from" or "to" as an empty string — use "current location" if the origin is unknown.
-- Never include anything outside the JSON object.`;
+- Never include anything outside the JSON object.
+
+Typo and phrasing handling:
+- Silently correct obvious spelling mistakes in connecting words (e.g. "form" → "from", "too" → "to", "fron" → "from") without mentioning the correction.
+- DO NOT try to correct or normalise place names themselves — extract them exactly as the user wrote them (e.g. "dockland campus", "UEL", "canary wharf" should all be passed through verbatim). Place name resolution happens downstream.
+- Handle very informal phrasings such as "whats the way from X to Y", "how do i get to X", "take me to X", "I need to reach X from Y" — extract the intent, not the literal words.
+- If the input is genuinely gibberish with no discernible origin or destination (e.g. "asdkfj to zzzxyz"), return: {"from": "UNKNOWN", "to": "UNKNOWN", "arriveBy": null, "departAt": null}
+- If only one place is unrecognisable, set that field to "UNKNOWN" and extract the other normally.`;
 
   let rawText = "";
   try {
@@ -90,13 +98,22 @@ Rules:
   const fromVal = parsed.from.trim();
   const toVal = parsed.to.trim();
 
-  if (!fromVal) {
+  const fromUnknown = !fromVal || fromVal.toUpperCase() === "UNKNOWN";
+  const toUnknown = !toVal || toVal.toUpperCase() === "UNKNOWN";
+
+  if (fromUnknown && toUnknown) {
+    return Response.json(
+      { error: "Could not understand the origin or destination. Please rephrase, e.g. \"from Stratford to Canary Wharf\"." },
+      { status: 422 }
+    );
+  }
+  if (fromUnknown) {
     return Response.json(
       { error: "No origin found in your query. Please include where you're travelling from (e.g. \"from Stratford to UEL\")." },
       { status: 422 }
     );
   }
-  if (!toVal) {
+  if (toUnknown) {
     return Response.json(
       { error: "No destination found in your query. Please include where you want to go." },
       { status: 422 }

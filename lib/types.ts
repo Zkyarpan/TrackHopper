@@ -1,5 +1,17 @@
 // Shared types for the Journey Planner feature
 
+/** Returned when one side of a free-text journey resolves but the other doesn't */
+export interface ResolutionError {
+  /** The user-typed name that could not be resolved */
+  failedQuery: string;
+  /** Which side failed */
+  side: "from" | "to";
+  /** The station that DID resolve (if any) */
+  resolvedStation: StationMatch | null;
+  /** Near-miss candidates returned by /api/places/search for the failed side */
+  nearMisses: StationMatch[];
+}
+
 export interface StationMatch {
   id: string;
   name: string;

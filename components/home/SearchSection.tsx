@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Loader2Icon, MapPinIcon, XIcon, SendIcon } from "lucide-react";
 import type { useJourneySearch } from "@/hooks/useJourneySearch";
 import type { useNearbyStations } from "@/hooks/useNearbyStations";
@@ -15,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { searchStations } from "@/lib/api";
 
 type JourneySearch = ReturnType<typeof useJourneySearch>;
 type NearbyState = ReturnType<typeof useNearbyStations>;
@@ -78,6 +80,121 @@ function DisambiguationPicker({
             </Button>
           ))}
         </div>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/** Shown when one side of free-text resolution fails — lets user pick a near-miss or search manually */
+function ResolutionErrorPanel({ journey }: { journey: JourneySearch }) {
+  const re = journey.resolutionError;
+  const [query, setQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [results, setResults] = useState<StationMatch[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (re) {
+      setQuery("");
+      setResults([]);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [re]);
+
+  if (!re) return null;
+
+  const sideLabel = re.side === "to" ? "destination" : "origin";
+  const resolvedLabel = re.resolvedStation ? (
+    <span>
+      {re.side === "to" ? "From" : "To"}{" "}
+      <strong>{re.resolvedStation.name}</strong> was found, but{" "}
+    </span>
+  ) : null;
+
+  async function handleSearch(q: string) {
+    setQuery(q);
+    if (q.trim().length < 2) { setResults([]); return; }
+    setSearching(true);
+    try { setResults(await searchStations(q.trim())); } catch { /* ignore */ }
+    finally { setSearching(false); }
+  }
+
+  const candidates = re.nearMisses.length > 0 ? re.nearMisses : results;
+
+  return (
+    <Alert>
+      <AlertDescription className="space-y-3">
+        <p className="text-sm text-foreground">
+          {resolvedLabel}
+          <span>
+            couldn&apos;t place <strong>&quot;{re.failedQuery}&quot;</strong> as a {sideLabel}.
+            {re.nearMisses.length === 0 && " Search for the correct station below:"}
+          </span>
+        </p>
+
+        {re.nearMisses.length > 0 && (
+          <>
+            <p className="text-xs text-muted-foreground">Did you mean one of these?</p>
+            <div className="space-y-1">
+              {re.nearMisses.slice(0, 5).map((s) => (
+                <Button
+                  key={s.id}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                  onClick={() => journey.selectNearMiss(s)}
+                >
+                  <span className="w-12 shrink-0 truncate text-xs capitalize text-muted-foreground">{s.modes[0] ?? "•"}</span>
+                  {s.label ?? s.name}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">Or search manually:</p>
+          </>
+        )}
+
+        <div className="relative">
+          <Input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder={`Search for ${sideLabel}…`}
+          />
+          {searching && (
+            <Loader2Icon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          )}
+        </div>
+
+        {candidates.length > 0 && re.nearMisses.length === 0 && (
+          <div className="max-h-48 space-y-1 overflow-y-auto">
+            {candidates.slice(0, 6).map((s) => (
+              <Button
+                key={s.id}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2"
+                onClick={() => journey.selectNearMiss(s)}
+              >
+                <span className="w-12 shrink-0 truncate text-xs capitalize text-muted-foreground">{s.modes[0] ?? "•"}</span>
+                {s.name}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          Or switch to{" "}
+          <button
+            type="button"
+            className="underline"
+            onClick={() => journey.setMode("structured")}
+          >
+            Choose stations
+          </button>{" "}
+          for exact matching.
+        </p>
       </AlertDescription>
     </Alert>
   );
@@ -274,6 +391,8 @@ export default function SearchSection({ journey, geo }: Props) {
           Checking routes with TfL…
         </div>
       )}
+
+      {journey.resolutionError && <ResolutionErrorPanel journey={journey} />}
 
       {journey.error && (
         <Alert variant="destructive">

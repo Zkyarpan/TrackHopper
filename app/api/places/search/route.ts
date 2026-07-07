@@ -94,7 +94,8 @@ export async function GET(request: NextRequest) {
         const nearbyUrl = new URL("https://api.tfl.gov.uk/StopPoint");
         nearbyUrl.searchParams.set("lat", place.lat);
         nearbyUrl.searchParams.set("lon", place.lon);
-        nearbyUrl.searchParams.set("radius", "600");
+        // Use 1200m radius — campus/landmark entrances can be far from nearest stop
+        nearbyUrl.searchParams.set("radius", "1200");
         nearbyUrl.searchParams.set("stopTypes", "NaptanMetroStation,NaptanRailStation,NaptanPublicBusCoachTram");
         nearbyUrl.searchParams.set("modes", "tube,elizabeth-line,overground,dlr,national-rail,bus");
         nearbyUrl.searchParams.set("returnLines", "false");
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
 
         type TflStop = { id: string; commonName: string; modes?: string[]; distance?: number };
         const stops: TflStop[] = (data.stopPoints ?? []).sort(
-          (a: TflStop, b: TflStop) => (a.distance ?? 999) - (b.distance ?? 999)
+          (a: TflStop, b: TflStop) => (a.distance ?? 9999) - (b.distance ?? 9999)
         );
 
         if (stops.length === 0) return null;
@@ -125,11 +126,12 @@ export async function GET(request: NextRequest) {
       })
     );
 
+    type LandmarkMatch = { id: string; name: string; modes: string[]; label: string; source: string };
     nominatimMatches = nearbyResults
-      .filter((r): r is PromiseFulfilledResult<NonNullable<typeof r extends PromiseFulfilledResult<infer T> ? T : never>> =>
+      .filter((r): r is PromiseFulfilledResult<LandmarkMatch> =>
         r.status === "fulfilled" && r.value !== null
       )
-      .map((r) => r.value as { id: string; name: string; modes: string[]; label: string });
+      .map((r) => r.value);
   }
 
   // Merge: TfL results first, then landmark results that don't duplicate an existing TfL match

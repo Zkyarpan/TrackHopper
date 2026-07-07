@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { parseJourneyText, planJourney, searchStations } from "@/lib/api";
-import type { StationMatch, Journey, ParsedJourney, SaveRoutePayload } from "@/lib/types";
+import type { StationMatch, Journey, ParsedJourney, SaveRoutePayload, ResolutionError } from "@/lib/types";
 
 export type JourneyMode = "freetext" | "structured";
 export type JourneyLoadingState = "idle" | "parsing" | "searching" | "planning";
@@ -31,12 +31,14 @@ export function useJourneySearch() {
 
   const [loading, setLoading] = useState<JourneyLoadingState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [resolutionError, setResolutionError] = useState<ResolutionError | null>(null);
   const [journeys, setJourneys] = useState<Journey[] | null>(null);
   const [savePayload, setSavePayload] = useState<SaveRoutePayload | null>(null);
 
   const switchMode = useCallback((next: JourneyMode) => {
     setMode(next);
     setError(null);
+    setResolutionError(null);
     setJourneys(null);
   }, []);
 
@@ -105,6 +107,7 @@ export function useJourneySearch() {
   const handleFreeTextSubmit = useCallback(async () => {
     if (!freeText.trim()) return;
     setError(null);
+    setResolutionError(null);
     setJourneys(null);
     setSavePayload(null);
     setDisambigFrom(null);
@@ -133,15 +136,37 @@ export function useJourneySearch() {
       return;
     }
 
-    if (fromMatches.length === 0 || parsed.from === "current location") {
+    if (parsed.from === "current location") {
+      // Explicit "current location" — ask user to confirm their origin
       setPendingParsed({ ...parsed, to: toMatches.length === 1 ? toMatches[0].id : parsed.to });
       if (toMatches.length > 1) setDisambigTo(toMatches);
       setNeedsOriginSearch(true);
       setLoading("idle");
       return;
     }
+    if (fromMatches.length === 0 && toMatches.length === 0) {
+      // Both failed — show a generic error
+      setError(`Couldn't find stations for "${parsed.from}" or "${parsed.to}". Please try the structured form.`);
+      setLoading("idle");
+      return;
+    }
+    if (fromMatches.length === 0) {
+      setResolutionError({
+        failedQuery: parsed.from,
+        side: "from",
+        resolvedStation: toMatches.length > 0 ? toMatches[0] : null,
+        nearMisses: [],
+      });
+      setLoading("idle");
+      return;
+    }
     if (toMatches.length === 0) {
-      setError(`Could not find a station matching "${parsed.to}". Try the structured form below.`);
+      setResolutionError({
+        failedQuery: parsed.to,
+        side: "to",
+        resolvedStation: fromMatches.length > 0 ? fromMatches[0] : null,
+        nearMisses: [],
+      });
       setLoading("idle");
       return;
     }
@@ -207,6 +232,36 @@ export function useJourneySearch() {
     },
     [pendingParsed, disambigFrom, disambigTo]
   );
+
+  // ── near-miss selection (when one side of free-text failed) ─────────────
+  const selectNearMiss = useCallback(async (station: StationMatch) => {
+    if (!resolutionError) return;
+    const { side, resolvedStation } = resolutionError;
+    setResolutionError(null);
+    setError(null);
+
+    const fromId = side === "to" ? (resolvedStation?.id ?? "") : station.id;
+    const toId = side === "to" ? station.id : (resolvedStation?.id ?? "");
+    if (!fromId || !toId) {
+      setError("Could not complete the journey — one station could not be identified.");
+      return;
+    }
+
+    setSavePayload({
+      fromStationId: fromId,
+      fromStationName: side === "to" ? (resolvedStation?.name ?? fromId) : station.name,
+      toStationId: toId,
+      toStationName: side === "to" ? station.name : (resolvedStation?.name ?? toId),
+    });
+    setLoading("planning");
+    try {
+      setJourneys(await planJourney(fromId, toId, null, null));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Journey planning failed");
+    } finally {
+      setLoading("idle");
+    }
+  }, [resolutionError]);
 
   // ── structured form submit ───────────────────────────────────────────────
   const handleStructuredSubmit = useCallback(async () => {
@@ -287,11 +342,13 @@ export function useJourneySearch() {
     loading,
     isLoading: loading !== "idle",
     error,
+    resolutionError,
     journeys,
     savePayload,
     handleFreeTextSubmit,
     handleStructuredSubmit,
     resolveDisambig,
     runSavedRoute,
+    selectNearMiss,
   };
 }
