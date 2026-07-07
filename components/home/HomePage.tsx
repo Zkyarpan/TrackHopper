@@ -47,7 +47,11 @@ export function HomePage() {
         <SearchSection journey={journey} geo={geo} />
 
         {journey.journeys !== null && journey.journeys.length > 0 && (
-          <JourneyResults journeys={journey.journeys} savePayload={journey.savePayload ?? undefined} />
+          <JourneyResults
+            journeys={journey.journeys}
+            savePayload={journey.savePayload ?? undefined}
+            userLocation={geo.coords ?? null}
+          />
         )}
         {journey.journeys !== null && journey.journeys.length === 0 && <EmptyState />}
       </main>

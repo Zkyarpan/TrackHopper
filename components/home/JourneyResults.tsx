@@ -26,7 +26,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 
 const JourneyMap = dynamic(() => import("@/components/home/JourneyMap"), {
   ssr: false,
-  loading: () => <Skeleton className="mt-3 h-[260px] w-full rounded-xl" />,
+  loading: () => <Skeleton className="mt-3 h-[280px] w-full rounded-xl" />,
 });
 
 const MODE_LABELS: Record<string, string> = {
@@ -60,6 +60,7 @@ interface Props {
   journeys: Journey[];
   savePayload?: SaveRoutePayload;
   isLoading?: boolean;
+  userLocation?: { lat: number; lon: number } | null;
 }
 
 function SaveButton({ payload }: { payload: SaveRoutePayload }) {
@@ -146,7 +147,7 @@ function SaveButton({ payload }: { payload: SaveRoutePayload }) {
   );
 }
 
-export default function JourneyResults({ journeys, savePayload, isLoading }: Props) {
+export default function JourneyResults({ journeys, savePayload, isLoading, userLocation }: Props) {
   if (isLoading) {
     return (
       <div className="mt-6 space-y-4">
@@ -228,7 +229,7 @@ export default function JourneyResults({ journeys, savePayload, isLoading }: Pro
               </AccordionItem>
             </Accordion>
 
-            <JourneyMap legs={journey.legs} />
+            <JourneyMap legs={journey.legs} userLocation={userLocation} />
           </CardContent>
         </Card>
       ))}

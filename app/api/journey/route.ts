@@ -34,9 +34,9 @@ interface TflJourneyResponse {
 function parseLineString(lineString?: string): Array<{ lat: number; lon: number }> {
   if (!lineString) return [];
   try {
-    // TfL lineString is JSON array of [lon, lat] pairs
+    // TfL lineString is a JSON array of [lat, lon] pairs (confirmed from live API)
     const pairs: [number, number][] = JSON.parse(lineString);
-    return pairs.map(([lon, lat]) => ({ lat, lon }));
+    return pairs.map(([lat, lon]) => ({ lat, lon }));
   } catch {
     return [];
   }
