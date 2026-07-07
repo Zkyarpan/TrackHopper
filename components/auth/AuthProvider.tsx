@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   useCallback,
   type ReactNode,
@@ -29,16 +30,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  // Keep a stable ref to the singleton client so signOut uses the same instance
+  // as the onAuthStateChange subscription (important: createBrowserClient is a
+  // singleton per module — same instance is always returned in the browser).
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
+    supabaseRef.current = supabase;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
+    // Use onAuthStateChange exclusively — it fires INITIAL_SESSION synchronously
+    // from cookies on first load, avoiding a race with a separate getSession()
+    // call that can briefly flash null even when a valid session cookie exists.
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -51,7 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    const supabase = createClient();
+    // Use the same singleton client — onAuthStateChange fires SIGNED_OUT and
+    // clears user/session state automatically.
+    const supabase = supabaseRef.current ?? createClient();
     await supabase.auth.signOut();
   }, []);
 
