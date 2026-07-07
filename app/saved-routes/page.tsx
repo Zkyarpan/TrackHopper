@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeftIcon, BookmarkIcon, PlayIcon, Trash2Icon } from "lucide-react";
+import { ArrowLeftIcon, BookmarkIcon, MapIcon, PlayIcon, Trash2Icon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useSavedRoutes } from "@/hooks/useSavedRoutes";
 import AuthModal from "@/components/auth/AuthModal";
@@ -19,6 +19,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function SavedRoutesPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  // isLoading from useSavedRoutes already folds in authLoading
   const { savedRoutes, isLoading, error, deleteRoute } = useSavedRoutes();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
@@ -61,8 +62,6 @@ export default function SavedRoutesPage() {
     );
   }
 
-  const loading = isLoading || authLoading;
-
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <AppHeader />
@@ -75,7 +74,8 @@ export default function SavedRoutesPage() {
           </Link>
         </div>
 
-        {loading && (
+        {/* State 1 — Loading (auth resolving or fetch in progress) */}
+        {isLoading && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-16 w-full rounded-xl" />
@@ -83,24 +83,39 @@ export default function SavedRoutesPage() {
           </div>
         )}
 
-        {error && (
+        {/* State 2 — Error (fetch failed — e.g. network / auth / RLS error) */}
+        {!isLoading && error && (
           <Alert variant="destructive">
-            <AlertDescription>Failed to load saved routes: {error}</AlertDescription>
+            <AlertDescription>
+              <span className="font-medium">Could not load saved routes.</span>{" "}
+              {error}
+            </AlertDescription>
           </Alert>
         )}
 
-        {!loading && savedRoutes.length === 0 && !error && (
-          <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              <p>No saved routes yet.</p>
-              <p className="mt-1 text-muted-foreground/70">
-                Plan a journey and click &quot;Save route&quot; to add one.
+        {/* State 3 — Empty but successful (logged-in, fetch OK, zero routes) */}
+        {!isLoading && !error && savedRoutes.length === 0 && (
+          <div className="flex flex-col items-center gap-4 py-16 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+              <MapIcon className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-medium text-foreground">No saved routes yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Plan a journey and tap <strong>Save route</strong> to keep it here.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+            <Link href="/">
+              <Button variant="outline" size="sm">
+                <MapIcon className="h-4 w-4" />
+                Plan a journey
+              </Button>
+            </Link>
+          </div>
         )}
 
-        {!loading && savedRoutes.length > 0 && (
+        {/* State 4 — Has routes */}
+        {!isLoading && !error && savedRoutes.length > 0 && (
           <div className="space-y-3">
             {savedRoutes.map((route) => (
               <Card key={route.id}>

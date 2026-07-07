@@ -5,6 +5,7 @@
 // Returns a unified list of StationMatch objects, with landmark results
 // labelled so the UI can show "UEL Docklands Campus (nearest: Cyprus DLR)"
 import { type NextRequest } from "next/server";
+import { logApiCall } from "@/lib/apiLog";
 
 export const dynamic = "force-dynamic";
 
@@ -76,6 +77,11 @@ export async function GET(request: NextRequest) {
       modes: m.modes ?? [],
       source: "tfl",
     }));
+    await logApiCall("tfl", true);
+  } else {
+    const errMsg =
+      tflRes.status === "rejected" ? String(tflRes.reason) : `HTTP ${tflRes.value.status}`;
+    await logApiCall("tfl", false, errMsg);
   }
 
   // Parse Nominatim results + fetch nearby TfL stops for each
@@ -83,6 +89,7 @@ export async function GET(request: NextRequest) {
   let nominatimMatches: Array<{ id: string; name: string; modes: string[]; label: string }> = [];
 
   if (nominatimRes.status === "fulfilled" && nominatimRes.value.ok) {
+    await logApiCall("nominatim", true);
     const places: NominatimResult[] = await nominatimRes.value.json();
     const londonPlaces = places.filter((p) =>
       isInLondon(parseFloat(p.lat), parseFloat(p.lon))
@@ -132,6 +139,12 @@ export async function GET(request: NextRequest) {
         r.status === "fulfilled" && r.value !== null
       )
       .map((r) => r.value);
+  } else {
+    const errMsg =
+      nominatimRes.status === "rejected"
+        ? String(nominatimRes.reason)
+        : `HTTP ${nominatimRes.value.status}`;
+    await logApiCall("nominatim", false, errMsg);
   }
 
   // Merge: TfL results first, then landmark results that don't duplicate an existing TfL match

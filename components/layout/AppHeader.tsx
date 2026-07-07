@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BookmarkIcon, LogOutIcon } from "lucide-react";
+import { BookmarkIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import AuthModal from "@/components/auth/AuthModal";
 import MobileNav from "@/components/layout/MobileNav";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { avatarColor, avatarUrl, displayName, initials } from "@/lib/user";
 
 export default function AppHeader() {
   const { user, loading: authLoading, signOut } = useAuth();
+  const isAdmin = useIsAdmin();
   const [showAuth, setShowAuth] = useState(false);
 
   return (
@@ -68,6 +70,12 @@ export default function AppHeader() {
                           <BookmarkIcon />
                           Saved routes
                         </DropdownMenuItem>
+                        {isAdmin && (
+                          <DropdownMenuItem render={<Link href="/admin" />}>
+                            <ShieldIcon />
+                            Admin
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem variant="destructive" onClick={() => signOut()}>
                           <LogOutIcon />
@@ -84,7 +92,12 @@ export default function AppHeader() {
 
                 {/* Mobile: sheet nav */}
                 <div className="sm:hidden">
-                  <MobileNav user={user} onSignOut={signOut} onSignInClick={() => setShowAuth(true)} />
+                  <MobileNav
+                    user={user}
+                    isAdmin={isAdmin}
+                    onSignOut={signOut}
+                    onSignInClick={() => setShowAuth(true)}
+                  />
                 </div>
               </>
             )}

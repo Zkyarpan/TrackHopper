@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { MenuIcon, BookmarkIcon, LogOutIcon, HomeIcon } from "lucide-react";
+import { MenuIcon, BookmarkIcon, LogOutIcon, HomeIcon, ShieldIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
@@ -10,11 +10,12 @@ import { avatarColor, avatarUrl, displayName, initials, type UserMeta } from "@/
 
 interface Props {
   user: UserMeta | null;
+  isAdmin?: boolean;
   onSignOut: () => void;
   onSignInClick: () => void;
 }
 
-export default function MobileNav({ user, onSignOut, onSignInClick }: Props) {
+export default function MobileNav({ user, isAdmin, onSignOut, onSignInClick }: Props) {
   const [open, setOpen] = useState(false);
   const pendingSignInRef = useRef(false);
 
@@ -72,6 +73,17 @@ export default function MobileNav({ user, onSignOut, onSignInClick }: Props) {
             >
               <BookmarkIcon className="h-4 w-4 text-muted-foreground" />
               Saved routes
+            </SheetClose>
+          )}
+
+          {user && isAdmin && (
+            <SheetClose
+              render={<Link href="/admin" onClick={() => setOpen(false)} />}
+              nativeButton={false}
+              className="flex items-center gap-2 rounded-lg px-2 py-2.5 text-sm hover:bg-muted"
+            >
+              <ShieldIcon className="h-4 w-4 text-muted-foreground" />
+              Admin
             </SheetClose>
           )}
 

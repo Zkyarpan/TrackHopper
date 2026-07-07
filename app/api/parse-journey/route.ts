@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { logApiCall } from "@/lib/apiLog";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,7 @@ Typo and phrasing handling:
     if (!res.ok) {
       const errBody = await res.text();
       console.error("Pollinations error:", res.status, errBody);
+      await logApiCall("pollinations", false, `HTTP ${res.status}`);
       return Response.json(
         { error: `AI service error (${res.status})` },
         { status: 502 }
@@ -65,8 +67,10 @@ Typo and phrasing handling:
     }
 
     rawText = await res.text();
+    await logApiCall("pollinations", true);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    await logApiCall("pollinations", false, msg);
     return Response.json({ error: `AI request failed: ${msg}` }, { status: 502 });
   }
 

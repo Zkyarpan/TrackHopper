@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { logApiCall } from "@/lib/apiLog";
 
 export const dynamic = "force-dynamic";
 
@@ -118,6 +119,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (res.status === 404) {
+      await logApiCall("tfl", true);
       return Response.json(
         { error: "No routes found between these stations." },
         { status: 404 }
@@ -127,6 +129,7 @@ export async function GET(request: NextRequest) {
     if (!res.ok) {
       const body = await res.text();
       console.error("TfL Journey error:", res.status, body);
+      await logApiCall("tfl", false, `HTTP ${res.status}`);
       return Response.json(
         { error: `TfL API error (${res.status})` },
         { status: 502 }
@@ -134,8 +137,10 @@ export async function GET(request: NextRequest) {
     }
 
     data = await res.json();
+    await logApiCall("tfl", true);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    await logApiCall("tfl", false, msg);
     return Response.json({ error: `TfL request failed: ${msg}` }, { status: 502 });
   }
 

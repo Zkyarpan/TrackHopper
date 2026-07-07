@@ -7,15 +7,17 @@ import { createClient } from "@/lib/supabase/client";
 import type { SavedRoute, SaveRoutePayload } from "@/lib/types";
 
 export function useSavedRoutes() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Start false — we don't know we need to load until auth resolves
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
     if (!user) {
       setSavedRoutes([]);
       setIsLoading(false);
+      setError(null);
       return;
     }
     setIsLoading(true);
@@ -26,8 +28,14 @@ export function useSavedRoutes() {
       .select("*")
       .order("created_at", { ascending: false });
     setIsLoading(false);
-    if (dbError) setError(dbError.message);
-    else setSavedRoutes(data ?? []);
+    if (dbError) {
+      // Ignore "no rows" as an error — it's a valid empty state
+      if (dbError.code !== "PGRST116") {
+        setError(dbError.message);
+      }
+    } else {
+      setSavedRoutes(data ?? []);
+    }
   }, [user]);
 
   useEffect(() => {
@@ -62,5 +70,8 @@ export function useSavedRoutes() {
     setSavedRoutes((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
-  return { savedRoutes, isLoading, error, saveRoute, deleteRoute, refetch };
+  // Combined loading: either auth is still resolving, or we're actively fetching routes
+  const loading = authLoading || isLoading;
+
+  return { savedRoutes, isLoading: loading, error, saveRoute, deleteRoute, refetch };
 }

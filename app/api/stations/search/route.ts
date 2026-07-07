@@ -1,4 +1,5 @@
 import { type NextRequest } from "next/server";
+import { logApiCall } from "@/lib/apiLog";
 
 export const dynamic = "force-dynamic";
 
@@ -42,14 +43,17 @@ export async function GET(request: NextRequest) {
     if (!res.ok) {
       const body = await res.text();
       console.error("TfL StopPoint/Search error:", res.status, body);
+      await logApiCall("tfl", false, `HTTP ${res.status}`);
       return Response.json(
         { error: `TfL API error (${res.status})` },
         { status: 502 }
       );
     }
     data = await res.json();
+    await logApiCall("tfl", true);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    await logApiCall("tfl", false, msg);
     return Response.json({ error: `TfL request failed: ${msg}` }, { status: 502 });
   }
 

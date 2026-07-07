@@ -1,3 +1,5 @@
+import { logApiCall } from "@/lib/apiLog";
+
 export const dynamic = "force-dynamic";
 // Revalidate every 60 seconds so status is reasonably fresh
 export const revalidate = 60;
@@ -33,14 +35,17 @@ export async function GET() {
     if (!res.ok) {
       const body = await res.text();
       console.error("TfL line status error:", res.status, body);
+      await logApiCall("tfl", false, `HTTP ${res.status}`);
       return Response.json(
         { error: `TfL API error (${res.status})` },
         { status: 502 }
       );
     }
     data = await res.json();
+    await logApiCall("tfl", true);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    await logApiCall("tfl", false, msg);
     return Response.json({ error: `TfL request failed: ${msg}` }, { status: 502 });
   }
 

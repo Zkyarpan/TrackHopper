@@ -2,6 +2,7 @@
 // Returns up to 8 TfL stop points within `radius` metres of the given coordinates.
 // Used after Nominatim resolves a landmark to lat/lon.
 import { type NextRequest } from "next/server";
+import { logApiCall } from "@/lib/apiLog";
 
 export const dynamic = "force-dynamic";
 
@@ -45,11 +46,14 @@ export async function GET(request: NextRequest) {
     if (!res.ok) {
       const body = await res.text();
       console.error("TfL StopPoint nearby error:", res.status, body);
+      await logApiCall("tfl", false, `HTTP ${res.status}`);
       return Response.json({ error: `TfL API error (${res.status})` }, { status: 502 });
     }
     data = await res.json();
+    await logApiCall("tfl", true);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
+    await logApiCall("tfl", false, msg);
     return Response.json({ error: `TfL request failed: ${msg}` }, { status: 502 });
   }
 
