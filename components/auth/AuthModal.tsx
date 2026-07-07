@@ -44,17 +44,16 @@ export default function AuthModal({ onSuccess, onClose, prompt }: Props) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [magicSent, setMagicSent] = useState(false);
-  const supabase = createClient();
 
   async function handleEmailPassword(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
+      const supabase = createClient();
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        // Supabase creates a session immediately for most signup configs
         toast.success("Account created");
         onSuccess?.();
       } else {
@@ -77,6 +76,7 @@ export default function AuthModal({ onSuccess, onClose, prompt }: Props) {
     setError(null);
     setLoading(true);
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { shouldCreateUser: true },
@@ -95,18 +95,25 @@ export default function AuthModal({ onSuccess, onClose, prompt }: Props) {
   async function handleGoogle() {
     setError(null);
     setGoogleLoading(true);
-    // redirectTo must be a clean URL with NO query params — it must exactly
-    // match one of the Authorized Redirect URIs registered in Google Console.
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) {
-      setError(error.message);
-      toast.error(error.message);
+    try {
+      const supabase = createClient();
+      // redirectTo must match exactly one of the Authorized Redirect URIs in
+      // both Supabase URL Configuration and Google OAuth client.
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: { access_type: "offline", prompt: "consent" },
+        },
+      });
+      if (error) throw error;
+      // On success the browser navigates away — no further action needed
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Google sign-in failed";
+      setError(msg);
+      toast.error(msg);
       setGoogleLoading(false);
     }
-    // On success the browser navigates away — no further action needed
   }
 
   return (

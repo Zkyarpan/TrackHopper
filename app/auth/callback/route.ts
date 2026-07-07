@@ -8,6 +8,8 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  // `next` param lets callers redirect to a specific page after login
+  const next = searchParams.get("next") ?? "/";
 
   if (code) {
     const cookieStore = await cookies();
@@ -30,12 +32,15 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}/`);
+      return NextResponse.redirect(`${origin}${next}`);
     }
-    // Log the error in dev so it's easy to diagnose
     console.error("[auth/callback] exchangeCodeForSession error:", error.message);
+    // Redirect to home with a visible error so the user knows what happened
+    return NextResponse.redirect(
+      `${origin}/?auth_error=${encodeURIComponent(error.message)}`
+    );
   }
 
-  // No code or exchange failed — back to home
+  // No code present — redirect home
   return NextResponse.redirect(`${origin}/`);
 }
