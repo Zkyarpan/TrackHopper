@@ -49,3 +49,24 @@ export interface LineStatus {
   status: string;
   reason: string | null;
 }
+
+export interface NearbyStation extends StationMatch {
+  distance?: number;
+}
+
+export interface SavedRoute {
+  id: string;
+  from_station_id: string;
+  from_station_name: string;
+  to_station_id: string;
+  to_station_name: string;
+  nickname: string | null;
+  created_at?: string;
+}
+
+export interface SaveRoutePayload {
+  fromStationId: string;
+  fromStationName: string;
+  toStationId: string;
+  toStationName: string;
+}

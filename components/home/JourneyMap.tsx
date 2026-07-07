@@ -53,7 +53,6 @@ export default function JourneyMap({ legs }: Props) {
 
   if (legs.length === 0) return null;
 
-  // Build all coordinate points across all legs
   type RoutePoint = { lat: number; lon: number; label: string; isStart?: boolean; isEnd?: boolean };
   const points: RoutePoint[] = [];
 
@@ -61,7 +60,6 @@ export default function JourneyMap({ legs }: Props) {
     if (leg.fromLat && leg.fromLon) {
       points.push({ lat: leg.fromLat, lon: leg.fromLon, label: leg.from, isStart: i === 0 });
     }
-    // Add path intermediate points (no label)
     if (leg.path && leg.path.length > 0) {
       leg.path.forEach((p) => {
         if (!points.some((e) => e.lat === p.lat && e.lon === p.lon)) {
@@ -78,11 +76,8 @@ export default function JourneyMap({ legs }: Props) {
 
   const latLngs: LatLngTuple[] = points.map((p) => [p.lat, p.lon]);
   const labelledPoints = points.filter((p) => p.label);
-
-  // Centre on London as fallback
   const centre: LatLngTuple = [points[0]?.lat ?? 51.505, points[0]?.lon ?? -0.09];
 
-  // Build polyline segments per leg, each with the leg's mode colour
   const segments: { points: LatLngTuple[]; colour: string }[] = legs.map((leg) => {
     const segPoints: LatLngTuple[] = [];
     if (leg.fromLat && leg.fromLon) segPoints.push([leg.fromLat, leg.fromLon]);
@@ -90,10 +85,7 @@ export default function JourneyMap({ legs }: Props) {
       leg.path.forEach((p) => segPoints.push([p.lat, p.lon]));
     }
     if (leg.toLat && leg.toLon) segPoints.push([leg.toLat, leg.toLon]);
-    return {
-      points: segPoints,
-      colour: MODE_COLOURS[leg.mode] ?? "#6b7280",
-    };
+    return { points: segPoints, colour: MODE_COLOURS[leg.mode] ?? "#6b7280" };
   });
 
   const startIcon = L.divIcon({
@@ -116,7 +108,7 @@ export default function JourneyMap({ legs }: Props) {
   });
 
   return (
-    <div className="mt-3 rounded-xl overflow-hidden border border-gray-200" style={{ height: 260 }}>
+    <div className="mt-3 overflow-hidden rounded-xl border" style={{ height: 260 }}>
       <MapContainer
         center={centre}
         zoom={13}
@@ -132,14 +124,12 @@ export default function JourneyMap({ legs }: Props) {
 
         <FitBounds points={latLngs} />
 
-        {/* Per-leg coloured polylines */}
         {segments.map((seg, i) =>
           seg.points.length >= 2 ? (
             <Polyline key={i} positions={seg.points} color={seg.colour} weight={4} opacity={0.85} />
           ) : null
         )}
 
-        {/* Named stop markers */}
         {labelledPoints.map((p, i) => {
           const icon = p.isStart ? startIcon : p.isEnd ? endIcon : midIcon;
           return (

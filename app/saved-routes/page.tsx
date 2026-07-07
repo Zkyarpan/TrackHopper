@@ -1,75 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/AuthProvider";
-import AuthModal from "@/components/AuthModal";
-import AppHeader from "@/components/AppHeader";
-import { createClient } from "@/lib/supabase/client";
-
-interface SavedRoute {
-  id: string;
-  from_station_id: string;
-  from_station_name: string;
-  to_station_id: string;
-  to_station_name: string;
-  nickname: string | null;
-  created_at: string;
-}
+import { toast } from "sonner";
+import { ArrowLeftIcon, BookmarkIcon, PlayIcon, Trash2Icon } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useSavedRoutes } from "@/hooks/useSavedRoutes";
+import AuthModal from "@/components/auth/AuthModal";
+import AppHeader from "@/components/layout/AppHeader";
+import Footer from "@/components/layout/Footer";
+import type { SavedRoute } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function SavedRoutesPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [routes, setRoutes] = useState<SavedRoute[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { savedRoutes, isLoading, error, deleteRoute } = useSavedRoutes();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
 
-  // Load saved routes when user is available
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    fetchRoutes();
-  }, [user, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function fetchRoutes() {
-    setLoading(true);
-    setError(null);
-    const supabase = createClient();
-    const { data, error: dbError } = await supabase
-      .from("saved_routes")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setLoading(false);
-    if (dbError) {
-      setError(dbError.message);
-    } else {
-      setRoutes(data ?? []);
-    }
-  }
-
-  async function deleteRoute(id: string) {
+  async function handleDelete(id: string) {
     setDeletingId(id);
-    const supabase = createClient();
-    const { error: dbError } = await supabase
-      .from("saved_routes")
-      .delete()
-      .eq("id", id);
-    setDeletingId(null);
-    if (dbError) {
-      setError(dbError.message);
-    } else {
-      setRoutes((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await deleteRoute(id);
+      toast.success("Route deleted");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete route");
+    } finally {
+      setDeletingId(null);
     }
   }
 
   function rerunRoute(route: SavedRoute) {
-    // Navigate to home with query params — the home page's structured form
+    // Navigate to home with query params — the home page's useJourneySearch
     // picks these up to pre-populate and trigger the journey search.
     const params = new URLSearchParams({
       fromId: route.from_station_id,
@@ -80,112 +47,97 @@ export default function SavedRoutesPage() {
     router.push(`/?${params}`);
   }
 
-  // Not logged in
   if (!authLoading && !user) {
     return (
-      <main className="min-h-screen bg-gray-50">
+      <div className="flex min-h-screen flex-col bg-background">
         <AppHeader />
-        <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
-          <p className="text-gray-600">Sign in to view your saved routes.</p>
-          <button
-            type="button"
-            onClick={() => setShowAuth(true)}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
-          >
-            Sign in
-          </button>
-          {showAuth && (
-            <AuthModal
-              onSuccess={() => setShowAuth(false)}
-              onClose={() => setShowAuth(false)}
-            />
-          )}
-        </div>
-      </main>
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+          <p className="text-muted-foreground">Sign in to view your saved routes.</p>
+          <Button onClick={() => setShowAuth(true)}>Sign in</Button>
+          {showAuth && <AuthModal onSuccess={() => setShowAuth(false)} onClose={() => setShowAuth(false)} />}
+        </main>
+        <Footer />
+      </div>
     );
   }
 
-  return (
-    <main className="min-h-screen bg-gray-50">
-      <AppHeader />
+  const loading = isLoading || authLoading;
 
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-5">
-          <h1 className="text-xl font-semibold text-gray-900">Saved routes</h1>
-          <Link
-            href="/"
-            className="text-sm text-blue-600 hover:underline"
-          >
-            ← Plan a journey
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <AppHeader />
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
+        <div className="mb-5 flex items-center justify-between">
+          <h1 className="text-xl font-semibold">Saved routes</h1>
+          <Link href="/" className="flex items-center gap-1 text-sm text-primary hover:underline">
+            <ArrowLeftIcon className="h-3.5 w-3.5" />
+            Plan a journey
           </Link>
         </div>
 
         {loading && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="rounded-xl border border-gray-200 bg-white p-4 animate-pulse h-16"
-              />
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
             ))}
           </div>
         )}
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            Failed to load saved routes: {error}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>Failed to load saved routes: {error}</AlertDescription>
+          </Alert>
         )}
 
-        {!loading && routes.length === 0 && !error && (
-          <div className="rounded-xl border border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-500">
-            <p>No saved routes yet.</p>
-            <p className="mt-1 text-gray-400">
-              Plan a journey and click "Save route" to add one.
-            </p>
-          </div>
+        {!loading && savedRoutes.length === 0 && !error && (
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              <p>No saved routes yet.</p>
+              <p className="mt-1 text-muted-foreground/70">
+                Plan a journey and click &quot;Save route&quot; to add one.
+              </p>
+            </CardContent>
+          </Card>
         )}
 
-        {!loading && routes.length > 0 && (
-          <ul className="space-y-3">
-            {routes.map((route) => (
-              <li
-                key={route.id}
-                className="rounded-xl border border-gray-200 bg-white p-4 flex items-center gap-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
-                    {route.nickname ?? `${route.from_station_name} → ${route.to_station_name}`}
-                  </p>
-                  {route.nickname && (
-                    <p className="text-xs text-gray-500 mt-0.5 truncate">
-                      {route.from_station_name} → {route.to_station_name}
+        {!loading && savedRoutes.length > 0 && (
+          <div className="space-y-3">
+            {savedRoutes.map((route) => (
+              <Card key={route.id}>
+                <CardContent className="flex items-center gap-3">
+                  <BookmarkIcon className="shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">
+                      {route.nickname ?? `${route.from_station_name} → ${route.to_station_name}`}
                     </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => rerunRoute(route)}
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
-                  >
-                    Plan again
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteRoute(route.id)}
-                    disabled={deletingId === route.id}
-                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 disabled:opacity-50 transition-colors"
-                  >
-                    {deletingId === route.id ? "…" : "Delete"}
-                  </button>
-                </div>
-              </li>
+                    {route.nickname && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {route.from_station_name} → {route.to_station_name}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => rerunRoute(route)}>
+                      <PlayIcon />
+                      Plan again
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(route.id)}
+                      disabled={deletingId === route.id}
+                    >
+                      <Trash2Icon />
+                      {deletingId === route.id ? "…" : "Delete"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
-          </ul>
+          </div>
         )}
-      </div>
-    </main>
+      </main>
+      <Footer />
+    </div>
   );
 }
-
