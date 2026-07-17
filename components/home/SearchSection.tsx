@@ -1,13 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2Icon, MapPinIcon, XIcon, SendIcon } from "lucide-react";
+import {
+  Clock3Icon,
+  Loader2Icon,
+  MapIcon,
+  MapPinIcon,
+  MessageSquareTextIcon,
+  SendIcon,
+  SparklesIcon,
+  XIcon,
+} from "lucide-react";
 import type { useJourneySearch } from "@/hooks/useJourneySearch";
 import type { useNearbyStations } from "@/hooks/useNearbyStations";
 import type { StationMatch } from "@/lib/types";
 import StationAutocomplete from "@/components/station/StationAutocomplete";
 import StationSwapButton from "@/components/station/StationSwapButton";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -27,11 +36,11 @@ function GeoButton({ geo }: { geo: NearbyState }) {
       <button
         type="button"
         onClick={geo.reset}
-        className="inline-flex items-center gap-1 text-xs text-green-600 hover:text-green-800"
+        className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-success/10 px-2.5 text-xs font-semibold text-success-foreground transition-colors hover:bg-success/15"
       >
-        <MapPinIcon className="h-3.5 w-3.5" />
-        {geo.nearestStation.name}
-        <XIcon className="h-3 w-3" />
+        <MapPinIcon className="size-3.5" />
+        <span className="max-w-40 truncate">{geo.nearestStation.name}</span>
+        <XIcon className="size-3" />
       </button>
     );
   }
@@ -44,9 +53,9 @@ function GeoButton({ geo }: { geo: NearbyState }) {
       type="button"
       onClick={geo.requestLocation}
       disabled={busy}
-      className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
+      className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-primary/7 hover:text-primary disabled:opacity-50"
     >
-      {busy ? <Loader2Icon className="h-3.5 w-3.5 animate-spin" /> : <MapPinIcon className="h-3.5 w-3.5" />}
+      {busy ? <Loader2Icon className="size-3.5 animate-spin" /> : <MapPinIcon className="size-3.5" />}
       {geo.phase === "locating" ? "Getting location…" : geo.phase === "resolving" ? "Finding nearest station…" : "Use my location"}
     </button>
   );
@@ -63,8 +72,9 @@ function DisambiguationPicker({
 }) {
   return (
     <Alert>
+      <MapPinIcon />
       <AlertDescription>
-        <p className="mb-2 text-sm font-medium text-foreground">Multiple stations match &quot;{label}&quot; — pick one:</p>
+        <p className="mb-2 text-sm font-semibold text-foreground">Multiple stations match &quot;{label}&quot;. Choose one:</p>
         <div className="space-y-1">
           {matches.slice(0, 6).map((s) => (
             <Button
@@ -95,9 +105,12 @@ function ResolutionErrorPanel({ journey }: { journey: JourneySearch }) {
 
   useEffect(() => {
     if (re) {
-      setQuery("");
-      setResults([]);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      const focusTimer = setTimeout(() => {
+        setQuery("");
+        setResults([]);
+        inputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(focusTimer);
     }
   }, [re]);
 
@@ -122,7 +135,8 @@ function ResolutionErrorPanel({ journey }: { journey: JourneySearch }) {
   const candidates = re.nearMisses.length > 0 ? re.nearMisses : results;
 
   return (
-    <Alert>
+    <Alert variant="warning">
+      <MapPinIcon />
       <AlertDescription className="space-y-3">
         <p className="text-sm text-foreground">
           {resolvedLabel}
@@ -188,7 +202,7 @@ function ResolutionErrorPanel({ journey }: { journey: JourneySearch }) {
           Or switch to{" "}
           <button
             type="button"
-            className="underline"
+            className="font-semibold text-primary underline underline-offset-2"
             onClick={() => journey.setMode("structured")}
           >
             Choose stations
@@ -207,18 +221,43 @@ interface Props {
 
 export default function SearchSection({ journey, geo }: Props) {
   return (
-    <div className="space-y-4">
-      <Tabs value={journey.mode} onValueChange={(v) => journey.setMode(v as "freetext" | "structured")}>
-        <TabsList className="w-full">
-          <TabsTrigger value="freetext" className="flex-1">Ask in plain English</TabsTrigger>
-          <TabsTrigger value="structured" className="flex-1">Choose stations</TabsTrigger>
-        </TabsList>
-      </Tabs>
+    <Card className="surface-elevated relative overflow-visible rounded-[28px] border-white/80 bg-card/95 py-0 backdrop-blur-sm">
+      <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+      <CardHeader className="p-5 pb-4 sm:p-6 sm:pb-4">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <SparklesIcon className="size-5" />
+          </span>
+          <div>
+            <CardTitle className="text-xl sm:text-2xl">Plan your next journey</CardTitle>
+            <CardDescription className="mt-1 leading-5">
+              Tell us naturally or choose exact stations.
+            </CardDescription>
+          </div>
+        </div>
 
-      {journey.mode === "freetext" ? (
-        <Card>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
+        <Tabs
+          value={journey.mode}
+          onValueChange={(v) => journey.setMode(v as "freetext" | "structured")}
+          className="mt-4"
+        >
+          <TabsList className="w-full">
+            <TabsTrigger value="freetext" className="flex-1">
+              <MessageSquareTextIcon />
+              Ask naturally
+            </TabsTrigger>
+            <TabsTrigger value="structured" className="flex-1">
+              <MapIcon />
+              Choose stations
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </CardHeader>
+
+      <CardContent className="space-y-4 p-5 pt-0 sm:p-6 sm:pt-0">
+        {journey.mode === "freetext" ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Label htmlFor="freetext-journey">Where do you want to go?</Label>
               <GeoButton geo={geo} />
             </div>
@@ -226,8 +265,9 @@ export default function SearchSection({ journey, geo }: Props) {
               id="freetext-journey"
               value={journey.freeText}
               onChange={(e) => journey.setFreeText(e.target.value)}
-              placeholder="e.g. from Stratford to UEL by 9am, or from King's Cross to London Bridge"
-              rows={2}
+              placeholder="Try “King’s Cross to London Bridge by 9am”"
+              rows={3}
+              className="min-h-28 bg-background/60 text-[15px]"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -235,38 +275,40 @@ export default function SearchSection({ journey, geo }: Props) {
                 }
               }}
             />
+            <div className="-mt-1 flex items-center justify-between gap-3 text-[11px] leading-4 text-muted-foreground">
+              <span>Include a time if it matters.</span>
+              <span className="hidden sm:inline">Enter to plan · Shift + Enter for a new line</span>
+            </div>
             <Button
               type="button"
+              size="lg"
               className="w-full"
               onClick={journey.handleFreeTextSubmit}
               disabled={journey.isLoading || !journey.freeText.trim()}
             >
               {journey.loading === "parsing" ? (
-                "Understanding your request…"
+                <><Loader2Icon className="animate-spin" /> Understanding your request…</>
               ) : journey.loading === "searching" ? (
-                "Finding stations…"
+                <><Loader2Icon className="animate-spin" /> Finding stations…</>
               ) : (
-                <>
-                  <SendIcon /> Plan journey
-                </>
+                <><SendIcon /> Plan my journey</>
               )}
             </Button>
 
             {journey.needsOriginSearch && (
               <Alert>
-                <AlertDescription className="space-y-2">
-                  <p className="font-medium text-foreground">
-                    Where are you travelling <span className="underline">from</span>?
-                  </p>
+                <MapPinIcon />
+                <AlertDescription className="space-y-3">
+                  <p className="font-semibold text-foreground">Where are you travelling from?</p>
                   <div className="relative">
                     <Input
                       value={journey.originQuery}
                       onChange={(e) => journey.searchOrigin(e.target.value)}
-                      placeholder="e.g. Stratford, Mile End, Liverpool Street…"
+                      placeholder="Stratford, Mile End, Liverpool Street…"
                       autoFocus
                     />
                     {journey.originSearching && (
-                      <Loader2Icon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                      <Loader2Icon className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
                     )}
                   </div>
                   {journey.originResults.length > 0 && (
@@ -277,10 +319,10 @@ export default function SearchSection({ journey, geo }: Props) {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="w-full justify-start gap-2"
+                          className="w-full justify-start"
                           onClick={() => journey.confirmOrigin(s)}
                         >
-                          <span className="w-12 shrink-0 truncate text-xs capitalize text-muted-foreground">{s.modes[0] ?? "•"}</span>
+                          <span className="w-14 shrink-0 truncate text-xs font-normal capitalize text-muted-foreground">{s.modes[0] ?? "•"}</span>
                           {s.name}
                         </Button>
                       ))}
@@ -304,47 +346,51 @@ export default function SearchSection({ journey, geo }: Props) {
                 onSelect={(s) => journey.resolveDisambig("to", s)}
               />
             )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="space-y-4">
-            <div>
-              <StationAutocomplete
-                label="From"
-                placeholder="Departure station"
-                value={journey.structFrom}
-                onChange={journey.setStructFrom}
-              />
-              <div className="mt-1.5">
-                <GeoButton geo={geo} />
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-border/80 bg-background/55 p-4">
+              <div className="relative pl-6">
+                <span className="absolute top-7 bottom-7 left-[5px] w-px bg-border" />
+                <span className="absolute top-[25px] left-0 size-[11px] rounded-full border-[3px] border-primary bg-card" />
+                <span className="absolute bottom-[18px] left-0 size-[11px] rounded-full border-[3px] border-brand bg-card" />
+                <StationAutocomplete
+                  label="From"
+                  placeholder="Departure station"
+                  value={journey.structFrom}
+                  onChange={journey.setStructFrom}
+                />
+                <div className="mt-2 flex items-center justify-between border-b border-border/70 pb-3">
+                  <GeoButton geo={geo} />
+                  <StationSwapButton
+                    onSwap={() => {
+                      const from = journey.structFrom;
+                      const to = journey.structTo;
+                      journey.setStructFrom(to);
+                      journey.setStructTo(from);
+                    }}
+                    disabled={!journey.structFrom && !journey.structTo}
+                  />
+                </div>
+                <div className="pt-3">
+                  <StationAutocomplete
+                    label="To"
+                    placeholder="Destination station"
+                    value={journey.structTo}
+                    onChange={journey.setStructTo}
+                  />
+                </div>
               </div>
             </div>
-
-            <div className="-my-2 flex justify-center">
-              <StationSwapButton
-                onSwap={() => {
-                  const from = journey.structFrom;
-                  const to = journey.structTo;
-                  journey.setStructFrom(to);
-                  journey.setStructTo(from);
-                }}
-                disabled={!journey.structFrom && !journey.structTo}
-              />
-            </div>
-
-            <StationAutocomplete
-              label="To"
-              placeholder="Destination station"
-              value={journey.structTo}
-              onChange={journey.setStructTo}
-            />
 
             <Separator />
 
             <div>
-              <Label className="mb-1.5 block">Time (optional)</Label>
-              <div className="mb-2 flex flex-wrap gap-2">
+              <Label className="mb-2.5 flex">
+                <Clock3Icon className="size-4 text-muted-foreground" />
+                When are you travelling?
+              </Label>
+              <div className="flex flex-wrap gap-2">
                 {(["none", "departAt", "arriveBy"] as const).map((opt) => (
                   <Toggle
                     key={opt}
@@ -360,47 +406,47 @@ export default function SearchSection({ journey, geo }: Props) {
               {journey.timeMode !== "none" && (
                 <Input
                   type="time"
+                  aria-label={journey.timeMode === "departAt" ? "Departure time" : "Arrival time"}
                   value={journey.timeValue}
                   onChange={(e) => journey.setTimeValue(e.target.value)}
-                  className="w-auto"
+                  className="mt-3 w-36 tabular-nums"
                 />
               )}
             </div>
 
             <Button
               type="button"
+              size="lg"
               className="w-full"
               onClick={journey.handleStructuredSubmit}
               disabled={journey.isLoading || !journey.structFrom || !journey.structTo}
             >
               {journey.loading === "planning" ? (
-                "Finding routes…"
+                <><Loader2Icon className="animate-spin" /> Finding the best routes…</>
               ) : (
-                <>
-                  <SendIcon /> Plan journey
-                </>
+                <><SendIcon /> Plan my journey</>
               )}
             </Button>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {journey.loading === "planning" && (
-        <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
-          <Loader2Icon className="h-4 w-4 animate-spin text-primary" />
-          Checking routes with TfL…
-        </div>
-      )}
+        {journey.loading === "planning" && (
+          <div className="flex items-center justify-center gap-2 rounded-xl bg-primary/5 px-3 py-2.5 text-sm font-medium text-primary">
+            <Loader2Icon className="size-4 animate-spin" />
+            Checking live routes with TfL…
+          </div>
+        )}
 
-      {journey.resolutionError && <ResolutionErrorPanel journey={journey} />}
+        {journey.resolutionError && <ResolutionErrorPanel journey={journey} />}
 
-      {journey.error && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            <span className="font-medium">Error: </span>{journey.error}
-          </AlertDescription>
-        </Alert>
-      )}
-    </div>
+        {journey.error && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              <span className="font-semibold">We couldn’t plan that journey. </span>{journey.error}
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
   );
 }

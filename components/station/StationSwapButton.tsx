@@ -17,7 +17,8 @@ export default function StationSwapButton({ onSwap, disabled }: Props) {
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
+            size="icon"
+            className="rounded-full border border-border bg-card text-primary shadow-sm hover:rotate-180"
             onClick={onSwap}
             disabled={disabled}
             aria-label="Swap departure and destination"

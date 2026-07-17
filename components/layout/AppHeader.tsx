@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { BookmarkIcon, LogOutIcon, ShieldIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import AuthModal from "@/components/auth/AuthModal";
+import BrandMark from "@/components/layout/BrandMark";
 import MobileNav from "@/components/layout/MobileNav";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -19,138 +21,123 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { avatarColor, avatarUrl, displayName, initials } from "@/lib/user";
+import { cn } from "@/lib/utils";
 
 export default function AppHeader() {
   const { user, loading: authLoading, signOut } = useAuth();
   const isAdmin = useIsAdmin();
+  const pathname = usePathname();
   const [showAuth, setShowAuth] = useState(false);
+
+  const navLink = (active: boolean) =>
+    cn(
+      "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+      active
+        ? "bg-primary/8 text-primary"
+        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+    );
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-        <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
-          {/* Brand */}
-          <Link
-            href="/"
-            className="group flex items-center gap-3 transition-opacity hover:opacity-80"
-          >
-            {/* Logo mark — a stylised track/rail roundel */}
-            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center">
-              {/* Outer ring */}
-              <div className="absolute inset-0 rounded-full border-[2.5px] border-red-600" />
-              {/* Crossbar */}
-              <div className="absolute inset-x-0 top-1/2 h-[18px] -translate-y-1/2 bg-red-600" />
-              <span className="relative z-10 text-[11px] font-extrabold tracking-tight text-white">
-                TH
-              </span>
-            </div>
+      <header className="sticky top-0 z-50 border-b border-border/70 bg-background/88 backdrop-blur-xl supports-[backdrop-filter]:bg-background/78">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-6">
+            <Link
+              href="/"
+              className="group flex items-center gap-3 rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/25"
+              aria-label="TrackHopper home"
+            >
+              <BrandMark className="size-9 transition-transform duration-200 group-hover:-rotate-2 group-hover:scale-[1.03]" />
+              <div className="min-w-0 leading-none">
+                <p className="truncate text-[17px] font-bold tracking-[-0.035em] sm:text-lg">
+                  TrackHopper
+                </p>
+                <p className="mt-1 hidden text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground sm:block">
+                  London, in motion
+                </p>
+              </div>
+            </Link>
 
-            <div className="min-w-0 leading-none">
-              <p className="truncate text-[17px] font-semibold tracking-[-0.02em]">
-                TrackHopper
-              </p>
-              <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                London journey planner
-              </p>
-            </div>
-          </Link>
+            <nav className="hidden items-center gap-1 md:flex" aria-label="Primary navigation">
+              <Link href="/" className={navLink(pathname === "/")}>
+                Plan a journey
+              </Link>
+              {user && (
+                <Link
+                  href="/saved-routes"
+                  className={navLink(pathname === "/saved-routes")}
+                >
+                  Saved routes
+                </Link>
+              )}
+              {user && isAdmin && (
+                <Link href="/admin" className={navLink(pathname.startsWith("/admin"))}>
+                  Admin
+                </Link>
+              )}
+            </nav>
+          </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-2">
             {authLoading ? (
-              <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+              <div className="size-10 animate-pulse rounded-full bg-muted" aria-label="Loading account" />
             ) : (
               <>
-                {/* Desktop */}
-                <div className="hidden sm:flex sm:items-center sm:gap-1.5">
+                <div className="hidden items-center sm:flex">
                   {user ? (
-                    <>
-                      {/* Quick-access saved routes */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            className="h-10 gap-2.5 rounded-full py-1 pr-3 pl-1.5"
+                          />
+                        }
                       >
-                        <Link href="/saved-routes" aria-label="Saved routes">
-                          <BookmarkIcon className="h-4 w-4" />
-                        </Link>
-                      </Button>
-
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              className="h-8 gap-2 rounded-full pl-1 pr-2.5 hover:bg-accent"
-                            />
-                          }
-                        >
-                          <Avatar size="sm">
-                            {avatarUrl(user) && (
-                              <AvatarImage
-                                src={avatarUrl(user)!}
-                                alt={displayName(user)}
-                              />
-                            )}
-                            <AvatarFallback
-                              className={avatarColor(
-                                user.email ?? user.id ?? "",
-                              )}
-                            >
-                              <span className="text-white text-xs">
-                                {initials(user)}
-                              </span>
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="max-w-[100px] truncate text-sm font-medium">
-                            {displayName(user)}
-                          </span>
-                        </DropdownMenuTrigger>
-
-                        <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuGroup>
-                            <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
-                              {user.email}
-                            </DropdownMenuLabel>
-                          </DropdownMenuGroup>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            render={<Link href="/saved-routes" />}
-                          >
-                            <BookmarkIcon />
-                            Saved routes
-                          </DropdownMenuItem>
-                          {isAdmin && (
-                            <DropdownMenuItem render={<Link href="/admin" />}>
-                              <ShieldIcon />
-                              Admin
-                            </DropdownMenuItem>
+                        <Avatar>
+                          {avatarUrl(user) && (
+                            <AvatarImage src={avatarUrl(user)!} alt={displayName(user)} />
                           )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => signOut()}
-                          >
-                            <LogOutIcon />
-                            Sign out
+                          <AvatarFallback className={avatarColor(user.email ?? user.id ?? "")}>
+                            <span className="text-xs text-white">{initials(user)}</span>
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="max-w-32 truncate text-sm font-semibold">
+                          {displayName(user)}
+                        </span>
+                      </DropdownMenuTrigger>
+
+                      <DropdownMenuContent align="end" className="w-60">
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel className="truncate px-2.5 py-2 font-normal">
+                            Signed in as <span className="font-medium text-foreground">{user.email}</span>
+                          </DropdownMenuLabel>
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem render={<Link href="/saved-routes" />}>
+                          <BookmarkIcon />
+                          Saved routes
+                        </DropdownMenuItem>
+                        {isAdmin && (
+                          <DropdownMenuItem render={<Link href="/admin" />}>
+                            <ShieldIcon />
+                            Admin dashboard
                           </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem variant="destructive" onClick={() => signOut()}>
+                          <LogOutIcon />
+                          Sign out
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   ) : (
-                    <Button
-                      size="sm"
-                      className="cursor-pointer h-8    rounded-full bg-red-600 px-4 text-xs  text-white shadow-none   
-                      hover:bg-red-700
-                      "
-                      onClick={() => setShowAuth(true)}
-                    >
+                    <Button size="sm" className="rounded-full px-4" onClick={() => setShowAuth(true)}>
                       Sign in
                     </Button>
                   )}
                 </div>
 
-                {/* Mobile */}
                 <div className="sm:hidden">
                   <MobileNav
                     user={user}
@@ -174,4 +161,3 @@ export default function AppHeader() {
     </>
   );
 }
-

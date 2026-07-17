@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2Icon, MailCheckIcon } from "lucide-react";
+import { Loader2Icon, LockKeyholeIcon, MailCheckIcon, ShieldCheckIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import BrandMark from "@/components/layout/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -118,92 +119,107 @@ export default function AuthModal({ onSuccess, onClose, prompt }: Props) {
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose?.(); }}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{mode === "signin" ? "Sign in" : "Create account"}</DialogTitle>
-          {prompt && <DialogDescription>{prompt}</DialogDescription>}
-        </DialogHeader>
-
-        {magicSent ? (
-          <Alert>
-            <MailCheckIcon className="text-green-600" />
-            <AlertDescription>
-              Check your email — we sent a sign-in link to <strong>{email}</strong>
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <div className="space-y-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleGoogle}
-              disabled={googleLoading || loading}
-            >
-              {googleLoading ? <Loader2Icon className="animate-spin" /> : <GoogleIcon />}
-              Continue with Google
-            </Button>
-
-            <div className="relative flex items-center gap-2">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">or</span>
-              <Separator className="flex-1" />
+      <DialogContent className="overflow-hidden p-0 sm:max-w-md sm:p-0">
+        <div className="border-b border-primary/10 bg-gradient-to-br from-primary/10 via-primary/5 to-brand/8 p-5 pr-14 sm:p-6 sm:pr-14">
+          <DialogHeader className="flex-row items-center gap-3 text-left">
+            <BrandMark className="size-11" />
+            <div>
+              <DialogTitle>{mode === "signin" ? "Welcome back" : "Create your account"}</DialogTitle>
+              <DialogDescription className="mt-1">
+                {prompt ?? "Save routes and make every commute quicker."}
+              </DialogDescription>
             </div>
+          </DialogHeader>
+        </div>
 
-            <Tabs
-              value={mode}
-              onValueChange={(v) => { setMode(v as "signin" | "signup"); setError(null); }}
-            >
-              <TabsList className="w-full">
-                <TabsTrigger value="signin" className="flex-1">Sign in</TabsTrigger>
-                <TabsTrigger value="signup" className="flex-1">Sign up</TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            <form onSubmit={handleEmailPassword} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="auth-email">Email</Label>
-                <Input
-                  id="auth-email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  autoFocus
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="auth-password">Password</Label>
-                <Input
-                  id="auth-password"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
-              </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
-              </Button>
-            </form>
-
-            <div className="relative flex items-center gap-2">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">or</span>
-              <Separator className="flex-1" />
+        <div className="p-5 sm:p-6">
+          {magicSent ? (
+            <div className="flex flex-col items-center py-5 text-center">
+              <span className="flex size-14 items-center justify-center rounded-2xl bg-success/10 text-success-foreground">
+                <MailCheckIcon className="size-7" />
+              </span>
+              <h3 className="mt-4 text-lg font-semibold">Check your inbox</h3>
+              <p className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
+                We sent a secure sign-in link to <strong className="text-foreground">{email}</strong>
+              </p>
             </div>
-
-            <form onSubmit={handleMagicLink}>
-              <Button type="submit" variant="outline" className="w-full" disabled={loading || !email}>
-                Email me a sign-in link instead
+          ) : (
+            <div className="space-y-5">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full"
+                onClick={handleGoogle}
+                disabled={googleLoading || loading}
+              >
+                {googleLoading ? <Loader2Icon className="animate-spin" /> : <GoogleIcon />}
+                Continue with Google
               </Button>
-            </form>
-          </div>
-        )}
+
+              <div className="relative flex items-center gap-3">
+                <Separator className="flex-1" />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">or use email</span>
+                <Separator className="flex-1" />
+              </div>
+
+              <Tabs
+                value={mode}
+                onValueChange={(v) => { setMode(v as "signin" | "signup"); setError(null); }}
+              >
+                <TabsList className="w-full">
+                  <TabsTrigger value="signin" className="flex-1">Sign in</TabsTrigger>
+                  <TabsTrigger value="signup" className="flex-1">Create account</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <form onSubmit={handleEmailPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="auth-email">Email address</Label>
+                  <Input
+                    id="auth-email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="auth-password">Password</Label>
+                  <Input
+                    id="auth-password"
+                    type="password"
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 6 characters"
+                  />
+                </div>
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                  {loading ? <><Loader2Icon className="animate-spin" /> Please wait…</> : mode === "signin" ? <><LockKeyholeIcon /> Sign in securely</> : "Create my account"}
+                </Button>
+              </form>
+
+              <form onSubmit={handleMagicLink}>
+                <Button type="submit" variant="ghost" className="w-full text-muted-foreground" disabled={loading || !email}>
+                  Email me a sign-in link instead
+                </Button>
+              </form>
+
+              <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+                <ShieldCheckIcon className="size-3.5" /> Your account is protected by Supabase authentication.
+              </p>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -38,7 +38,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }
       toastOptions={{
         classNames: {
-          toast: "cn-toast",
+          toast: "cn-toast !rounded-xl !border-border/80 !shadow-[0_16px_42px_color-mix(in_oklch,var(--foreground)_14%,transparent)]",
+          title: "!font-semibold",
+          description: "!text-muted-foreground",
+          success: "!border-success/20",
+          error: "!border-destructive/20",
         },
       }}
       {...props}

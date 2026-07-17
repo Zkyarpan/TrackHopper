@@ -9,15 +9,17 @@ function severity(status: string): "destructive" | "outline" {
 
 export default function LineStatusDetail({ lines }: { lines: LineStatus[] }) {
   const list = (
-    <div className="space-y-2">
+    <div className="space-y-2 pt-1">
       {lines.map((line) => (
-        <div key={line.id} className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium text-foreground">{line.name}</span>
-          <Badge variant={severity(line.status)}>{line.status}</Badge>
+        <div key={line.id} className="rounded-xl border border-destructive/10 bg-card/70 p-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-foreground">{line.name}</span>
+            <Badge variant={severity(line.status)}>{line.status}</Badge>
+          </div>
           {line.reason && (
-            <span className="line-clamp-1 text-xs text-muted-foreground">
+            <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
               {line.reason.replace(/^[^:]+:\s*/, "")}
-            </span>
+            </p>
           )}
         </div>
       ))}

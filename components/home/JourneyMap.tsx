@@ -200,7 +200,7 @@ export default function JourneyMap({ legs, userLocation }: Props) {
   });
 
   return (
-    <div className="mt-3 overflow-hidden rounded-xl border" style={{ height: 280 }}>
+    <div className="h-[260px] overflow-hidden rounded-2xl border border-border/80 bg-muted shadow-inner sm:h-[300px]">
       <MapContainer
         center={centre}
         zoom={13}

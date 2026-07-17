@@ -1,7 +1,15 @@
 "use client";
 
+import {
+  ActivityIcon,
+  BookmarkIcon,
+  CircleCheckIcon,
+  CircleXIcon,
+  UsersIcon,
+} from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface UserRow {
   id: string;
@@ -44,125 +52,167 @@ function formatDate(iso: string) {
   });
 }
 
-export default function AdminTabs({ users, routes, logs }: Props) {
+function StatCard({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  detail: string;
+}) {
   return (
-    <Tabs defaultValue="users">
-      <TabsList>
-        <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
-        <TabsTrigger value="routes">Saved routes ({routes.length})</TabsTrigger>
-        <TabsTrigger value="logs">API logs ({logs.length})</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="users" className="mt-4">
-        <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">Email</th>
-                <th className="px-3 py-2 font-medium">Signed up</th>
-                <th className="px-3 py-2 font-medium">Last sign in</th>
-                <th className="px-3 py-2 font-medium">Saved routes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b last:border-0">
-                  <td className="px-3 py-2">{u.email ?? "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{formatDate(u.createdAt)}</td>
-                  <td className="px-3 py-2 text-muted-foreground">
-                    {u.lastSignInAt ? formatDate(u.lastSignInAt) : "—"}
-                  </td>
-                  <td className="px-3 py-2">{u.routeCount}</td>
-                </tr>
-              ))}
-              {users.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
-                    No users yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+    <Card size="sm" className="rounded-2xl bg-card/90">
+      <CardContent>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground">{label}</p>
+            <p className="mt-2 text-2xl font-bold tracking-[-0.04em] tabular-nums">{value}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">{detail}</p>
+          </div>
+          <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            {icon}
+          </span>
         </div>
-      </TabsContent>
+      </CardContent>
+    </Card>
+  );
+}
 
-      <TabsContent value="routes" className="mt-4">
-        <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">User</th>
-                <th className="px-3 py-2 font-medium">From</th>
-                <th className="px-3 py-2 font-medium">To</th>
-                <th className="px-3 py-2 font-medium">Nickname</th>
-                <th className="px-3 py-2 font-medium">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {routes.map((r) => (
-                <tr key={r.id} className="border-b last:border-0">
-                  <td className="px-3 py-2">{r.userEmail}</td>
-                  <td className="px-3 py-2">{r.fromStationName}</td>
-                  <td className="px-3 py-2">{r.toStationName}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{r.nickname ?? "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{formatDate(r.createdAt)}</td>
-                </tr>
-              ))}
-              {routes.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-3 py-6 text-center text-muted-foreground">
-                    No saved routes yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </TabsContent>
+function TableShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_8px_28px_color-mix(in_oklch,var(--foreground)_4%,transparent)]">
+      <div className="overflow-x-auto">{children}</div>
+    </div>
+  );
+}
 
-      <TabsContent value="logs" className="mt-4">
-        <div className="overflow-x-auto rounded-xl ring-1 ring-foreground/10">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">API</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Error</th>
-                <th className="px-3 py-2 font-medium">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((l) => (
-                <tr
-                  key={l.id}
-                  className={`border-b last:border-0 ${l.success ? "" : "bg-destructive/5"}`}
-                >
-                  <td className="px-3 py-2 capitalize">{l.api}</td>
-                  <td className="px-3 py-2">
-                    {l.success ? (
-                      <Badge variant="outline">Success</Badge>
-                    ) : (
-                      <Badge variant="destructive">Failure</Badge>
-                    )}
-                  </td>
-                  <td className={`px-3 py-2 ${l.success ? "text-muted-foreground" : "text-destructive"}`}>
-                    {l.error ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground">{formatDate(l.createdAt)}</td>
-                </tr>
-              ))}
-              {logs.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
-                    No API calls logged yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+const headCell = "whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground";
+const cell = "px-4 py-3.5 align-middle";
+
+export default function AdminTabs({ users, routes, logs }: Props) {
+  const successfulLogs = logs.filter((log) => log.success).length;
+  const failedLogs = logs.length - successfulLogs;
+  const successRate = logs.length > 0 ? Math.round((successfulLogs / logs.length) * 100) : 100;
+
+  return (
+    <div>
+      <div className="mb-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={<UsersIcon className="size-4.5" />} label="Total users" value={users.length} detail="Registered accounts" />
+        <StatCard icon={<BookmarkIcon className="size-4.5" />} label="Saved routes" value={routes.length} detail="Across all accounts" />
+        <StatCard icon={<CircleCheckIcon className="size-4.5" />} label="API success" value={`${successRate}%`} detail="Latest 100 requests" />
+        <StatCard icon={<CircleXIcon className="size-4.5" />} label="Failed calls" value={failedLogs} detail="In the current log view" />
+      </div>
+
+      <Tabs defaultValue="users">
+        <div className="mb-4 overflow-x-auto pb-1">
+          <TabsList className="w-max min-w-full justify-start sm:min-w-0">
+            <TabsTrigger value="users">
+              <UsersIcon /> Users <span className="text-muted-foreground">{users.length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="routes">
+              <BookmarkIcon /> Saved routes <span className="text-muted-foreground">{routes.length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="logs">
+              <ActivityIcon /> API logs <span className="text-muted-foreground">{logs.length}</span>
+            </TabsTrigger>
+          </TabsList>
         </div>
-      </TabsContent>
-    </Tabs>
+
+        <TabsContent value="users">
+          <TableShell>
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="border-b border-border/80 bg-muted/55">
+                <tr>
+                  <th className={headCell}>Email</th>
+                  <th className={headCell}>Signed up</th>
+                  <th className={headCell}>Last sign in</th>
+                  <th className={headCell}>Saved routes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/70">
+                {users.map((u) => (
+                  <tr key={u.id} className="transition-colors hover:bg-muted/35">
+                    <td className={`${cell} max-w-64 truncate font-medium`}>{u.email ?? "—"}</td>
+                    <td className={`${cell} whitespace-nowrap text-muted-foreground tabular-nums`}>{formatDate(u.createdAt)}</td>
+                    <td className={`${cell} whitespace-nowrap text-muted-foreground tabular-nums`}>
+                      {u.lastSignInAt ? formatDate(u.lastSignInAt) : "—"}
+                    </td>
+                    <td className={`${cell} tabular-nums`}><Badge variant="secondary">{u.routeCount}</Badge></td>
+                  </tr>
+                ))}
+                {users.length === 0 && (
+                  <tr><td colSpan={4} className="px-4 py-14 text-center text-muted-foreground">No users yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </TableShell>
+        </TabsContent>
+
+        <TabsContent value="routes">
+          <TableShell>
+            <table className="w-full min-w-[880px] text-left text-sm">
+              <thead className="border-b border-border/80 bg-muted/55">
+                <tr>
+                  <th className={headCell}>User</th>
+                  <th className={headCell}>From</th>
+                  <th className={headCell}>To</th>
+                  <th className={headCell}>Nickname</th>
+                  <th className={headCell}>Created</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/70">
+                {routes.map((r) => (
+                  <tr key={r.id} className="transition-colors hover:bg-muted/35">
+                    <td className={`${cell} max-w-56 truncate font-medium`}>{r.userEmail}</td>
+                    <td className={`${cell} max-w-48 truncate`}>{r.fromStationName}</td>
+                    <td className={`${cell} max-w-48 truncate`}>{r.toStationName}</td>
+                    <td className={`${cell} text-muted-foreground`}>{r.nickname ?? "—"}</td>
+                    <td className={`${cell} whitespace-nowrap text-muted-foreground tabular-nums`}>{formatDate(r.createdAt)}</td>
+                  </tr>
+                ))}
+                {routes.length === 0 && (
+                  <tr><td colSpan={5} className="px-4 py-14 text-center text-muted-foreground">No saved routes yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </TableShell>
+        </TabsContent>
+
+        <TabsContent value="logs">
+          <TableShell>
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="border-b border-border/80 bg-muted/55">
+                <tr>
+                  <th className={headCell}>API</th>
+                  <th className={headCell}>Status</th>
+                  <th className={headCell}>Error</th>
+                  <th className={headCell}>Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/70">
+                {logs.map((l) => (
+                  <tr key={l.id} className={`transition-colors hover:bg-muted/35 ${l.success ? "" : "bg-destructive/[0.035]"}`}>
+                    <td className={`${cell} font-mono text-xs font-semibold uppercase tracking-[0.04em]`}>{l.api}</td>
+                    <td className={cell}>
+                      {l.success ? <Badge variant="success">Success</Badge> : <Badge variant="destructive">Failure</Badge>}
+                    </td>
+                    <td className={`${cell} max-w-md ${l.success ? "text-muted-foreground" : "font-medium text-destructive"}`}>
+                      <span className="line-clamp-2">{l.error ?? "—"}</span>
+                    </td>
+                    <td className={`${cell} whitespace-nowrap text-muted-foreground tabular-nums`}>{formatDate(l.createdAt)}</td>
+                  </tr>
+                ))}
+                {logs.length === 0 && (
+                  <tr><td colSpan={4} className="px-4 py-14 text-center text-muted-foreground">No API calls logged yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </TableShell>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

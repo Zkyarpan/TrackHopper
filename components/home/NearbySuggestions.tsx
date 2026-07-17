@@ -5,7 +5,7 @@
 // among those nearby stations, surfaced as quick-picks.
 
 import { useMemo } from "react";
-import { MapPinIcon, BookmarkIcon } from "lucide-react";
+import { ArrowRightIcon, BookmarkIcon, MapPinIcon, NavigationIcon } from "lucide-react";
 import { useSavedRoutes } from "@/hooks/useSavedRoutes";
 import type { StationMatch } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,11 +34,11 @@ export default function NearbySuggestions({ stations, isLoading, onSelectFrom, o
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Nearby stations</p>
+      <Card className="rounded-3xl">
+        <CardContent className="space-y-3">
+          <p className="text-sm font-semibold">Finding stations near you</p>
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-7 w-full rounded-lg" />
+            <Skeleton key={i} className="h-10 w-full rounded-xl" />
           ))}
         </CardContent>
       </Card>
@@ -48,18 +48,29 @@ export default function NearbySuggestions({ stations, isLoading, onSelectFrom, o
   if (stations.length === 0) return null;
 
   return (
-    <Card>
-      <CardContent className="space-y-3">
+    <Card className="rounded-3xl bg-card/90">
+      <CardContent>
+        <div className="mb-5 flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-success/10 text-success-foreground">
+            <NavigationIcon className="size-4.5" />
+          </span>
+          <div>
+            <h2 className="text-base font-semibold tracking-[-0.015em]">Start from where you are</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Choose a nearby station or pick up a saved route.</p>
+          </div>
+        </div>
+
+        <div className={savedMatches.length > 0 ? "grid gap-6 lg:grid-cols-[0.9fr_1.1fr]" : ""}>
         {savedMatches.length > 0 && (
           <div>
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Continue a saved route</p>
-            <div className="space-y-1">
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">Continue a saved route</p>
+            <div className="space-y-2">
               {savedMatches.map((r) => (
                 <Button
                   key={r.id}
                   type="button"
                   variant="secondary"
-                  className="w-full justify-start gap-2 text-left"
+                  className="h-auto min-h-11 w-full justify-start gap-2.5 px-3.5 py-2.5 text-left whitespace-normal"
                   onClick={() =>
                     onRunSavedRoute(
                       { id: r.from_station_id, name: r.from_station_name, modes: [] },
@@ -67,8 +78,9 @@ export default function NearbySuggestions({ stations, isLoading, onSelectFrom, o
                     )
                   }
                 >
-                  <BookmarkIcon className="shrink-0 text-muted-foreground" />
-                  <span className="truncate">{r.nickname ?? `${r.from_station_name} → ${r.to_station_name}`}</span>
+                  <BookmarkIcon className="shrink-0 text-primary" />
+                  <span className="min-w-0 flex-1 truncate">{r.nickname ?? `${r.from_station_name} → ${r.to_station_name}`}</span>
+                  <ArrowRightIcon className="shrink-0 text-muted-foreground" />
                 </Button>
               ))}
             </div>
@@ -76,8 +88,8 @@ export default function NearbySuggestions({ stations, isLoading, onSelectFrom, o
         )}
 
         <div>
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Nearby stations</p>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground">Nearby stations</p>
+          <div className="flex flex-wrap gap-2">
             {stations.map((s) => {
               const distance = (s as StationMatch & { distance?: number }).distance;
               return (
@@ -86,18 +98,19 @@ export default function NearbySuggestions({ stations, isLoading, onSelectFrom, o
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="rounded-full"
+                  className="h-auto min-h-9 max-w-full rounded-full px-3 py-1.5"
                   onClick={() => onSelectFrom(s)}
                 >
                   <MapPinIcon className="text-muted-foreground" />
-                  {s.name}
+                  <span className="truncate">{s.name}</span>
                   {distance != null && (
-                    <Badge variant="outline" className="ml-0.5">{formatDistance(distance)}</Badge>
+                    <Badge variant="secondary" className="ml-0.5 h-5">{formatDistance(distance)}</Badge>
                   )}
                 </Button>
               );
             })}
           </div>
+        </div>
         </div>
       </CardContent>
     </Card>

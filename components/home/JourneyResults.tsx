@@ -3,8 +3,20 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
-import { HeartIcon, CheckIcon } from "lucide-react";
-import type { Journey, SaveRoutePayload } from "@/lib/types";
+import {
+  ArrowRightIcon,
+  BikeIcon,
+  BusFrontIcon,
+  CheckIcon,
+  Clock3Icon,
+  FootprintsIcon,
+  HeartIcon,
+  MapPinnedIcon,
+  SparklesIcon,
+  TrainFrontIcon,
+  TramFrontIcon,
+} from "lucide-react";
+import type { Journey, JourneyLeg, SaveRoutePayload } from "@/lib/types";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useSavedRoutes } from "@/hooks/useSavedRoutes";
 import AuthModal from "@/components/auth/AuthModal";
@@ -26,7 +38,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 
 const JourneyMap = dynamic(() => import("@/components/home/JourneyMap"), {
   ssr: false,
-  loading: () => <Skeleton className="mt-3 h-[280px] w-full rounded-xl" />,
+  loading: () => <Skeleton className="h-[260px] w-full rounded-2xl" />,
 });
 
 const MODE_LABELS: Record<string, string> = {
@@ -34,19 +46,37 @@ const MODE_LABELS: Record<string, string> = {
   bus: "Bus",
   walking: "Walk",
   walk: "Walk",
-  "elizabeth-line": "Elizabeth",
+  "elizabeth-line": "Elizabeth line",
   overground: "Overground",
   dlr: "DLR",
   tram: "Tram",
   "national-rail": "Rail",
   cycle: "Cycle",
-  "cycle-hire": "Cycle",
+  "cycle-hire": "Cycle hire",
+};
+
+const MODE_STYLES: Record<string, string> = {
+  tube: "border-red-200 bg-red-50 text-red-700",
+  bus: "border-red-200 bg-red-50 text-red-700",
+  walking: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  walk: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  "elizabeth-line": "border-purple-200 bg-purple-50 text-purple-700",
+  overground: "border-orange-200 bg-orange-50 text-orange-700",
+  dlr: "border-teal-200 bg-teal-50 text-teal-700",
+  tram: "border-green-200 bg-green-50 text-green-700",
+  "national-rail": "border-blue-200 bg-blue-50 text-blue-700",
+  cycle: "border-amber-200 bg-amber-50 text-amber-700",
+  "cycle-hire": "border-amber-200 bg-amber-50 text-amber-700",
 };
 
 function formatTime(iso: string | null) {
   if (!iso) return null;
   try {
-    return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+    return new Date(iso).toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
   } catch {
     return iso;
   }
@@ -54,6 +84,15 @@ function formatTime(iso: string | null) {
 
 function formatFare(fare: number | null) {
   return fare === null ? null : `£${fare.toFixed(2)}`;
+}
+
+function LegIcon({ mode }: { mode: JourneyLeg["mode"] }) {
+  const className = "size-4";
+  if (mode === "walking" || mode === "walk") return <FootprintsIcon className={className} />;
+  if (mode === "bus") return <BusFrontIcon className={className} />;
+  if (mode === "tram") return <TramFrontIcon className={className} />;
+  if (mode === "cycle" || mode === "cycle-hire") return <BikeIcon className={className} />;
+  return <TrainFrontIcon className={className} />;
 }
 
 interface Props {
@@ -88,8 +127,8 @@ function SaveButton({ payload }: { payload: SaveRoutePayload }) {
 
   if (saved) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
-        <CheckIcon className="h-3.5 w-3.5" />
+      <span className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-success/10 px-3 text-xs font-semibold text-success-foreground">
+        <CheckIcon className="size-3.5" />
         Saved
       </span>
     );
@@ -101,6 +140,7 @@ function SaveButton({ payload }: { payload: SaveRoutePayload }) {
         type="button"
         variant="outline"
         size="sm"
+        className="rounded-full"
         onClick={() => (user ? setShowNickname(true) : setShowAuth(true))}
         disabled={saving}
       >
@@ -111,12 +151,15 @@ function SaveButton({ payload }: { payload: SaveRoutePayload }) {
       <Dialog open={showNickname} onOpenChange={setShowNickname}>
         <DialogContent>
           <DialogHeader>
+            <span className="mb-1 flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <HeartIcon className="size-5" />
+            </span>
             <DialogTitle>Save this route</DialogTitle>
             <DialogDescription>
               {payload.fromStationName} → {payload.toStationName}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label htmlFor="route-nickname">
               Nickname <span className="font-normal text-muted-foreground">(optional)</span>
             </Label>
@@ -126,12 +169,14 @@ function SaveButton({ payload }: { payload: SaveRoutePayload }) {
               onChange={(e) => setNickname(e.target.value)}
               placeholder="e.g. Morning commute"
               autoFocus
-              onKeyDown={(e) => { if (e.key === "Enter") doSave(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") doSave();
+              }}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNickname(false)}>Cancel</Button>
-            <Button onClick={doSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+            <Button onClick={doSave} disabled={saving}>{saving ? "Saving…" : "Save route"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -139,7 +184,10 @@ function SaveButton({ payload }: { payload: SaveRoutePayload }) {
       {showAuth && (
         <AuthModal
           prompt="Sign in to save this route — it only takes a moment."
-          onSuccess={() => { setShowAuth(false); setShowNickname(true); }}
+          onSuccess={() => {
+            setShowAuth(false);
+            setShowNickname(true);
+          }}
           onClose={() => setShowAuth(false)}
         />
       )}
@@ -150,9 +198,9 @@ function SaveButton({ payload }: { payload: SaveRoutePayload }) {
 export default function JourneyResults({ journeys, savePayload, isLoading, userLocation }: Props) {
   if (isLoading) {
     return (
-      <div className="mt-6 space-y-4">
+      <div className="mt-10 space-y-5">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-32 w-full rounded-xl" />
+          <Skeleton key={i} className="h-64 w-full rounded-3xl" />
         ))}
       </div>
     );
@@ -161,78 +209,114 @@ export default function JourneyResults({ journeys, savePayload, isLoading, userL
   if (journeys.length === 0) return null;
 
   return (
-    <div className="mt-6 space-y-4">
-      <h2 className="text-lg font-semibold">
-        {journeys.length === 1 ? "1 route found" : `${journeys.length} routes found`}
-      </h2>
+    <section className="mt-12 animate-enter" aria-labelledby="journey-results-title">
+      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">Your options</p>
+          <h2 id="journey-results-title" className="mt-1 text-2xl font-bold tracking-[-0.035em] sm:text-3xl">
+            {journeys.length === 1 ? "1 route found" : `${journeys.length} routes found`}
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground">Times shown in local London time</p>
+      </div>
 
-      {journeys.map((journey, idx) => (
-        <Card key={idx}>
-          <CardHeader className="flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              {formatTime(journey.departureTime) && (
-                <span className="font-medium text-foreground">
-                  {formatTime(journey.departureTime)} → {formatTime(journey.arrivalTime)}
-                </span>
-              )}
-              <Badge variant="secondary">{journey.duration} min</Badge>
-              {formatFare(journey.fare) && (
-                <Badge variant="outline" className="border-green-300 text-green-700 dark:text-green-400">
-                  {formatFare(journey.fare)}
-                </Badge>
-              )}
-              {idx === 0 && <span className="text-xs font-medium text-muted-foreground">Fastest</span>}
-            </div>
-            {savePayload && <SaveButton payload={savePayload} />}
-          </CardHeader>
+      <div className="space-y-5">
+        {journeys.map((journey, idx) => {
+          const departure = formatTime(journey.departureTime);
+          const arrival = formatTime(journey.arrivalTime);
 
-          <CardContent>
-            <Accordion defaultValue={idx === 0 ? ["steps"] : []}>
-              <AccordionItem value="steps" className="border-none">
-                <AccordionTrigger className="py-1 text-sm text-muted-foreground hover:no-underline">
-                  {journey.legs.length === 1 ? "1 step" : `${journey.legs.length} steps`}
-                </AccordionTrigger>
-                <AccordionContent>
-                  <ol className="space-y-2">
-                    {journey.legs.map((leg, li) => (
-                      <li key={li} className="flex items-start gap-3 text-sm">
-                        <div className="shrink-0 pt-0.5">
-                          <Badge>{MODE_LABELS[leg.mode] ?? leg.mode}</Badge>
-                        </div>
-                        <div className="min-w-0">
-                          <div className="text-foreground">
-                            {leg.from && leg.to ? (
-                              <>
-                                <span className="font-medium">{leg.from}</span> → <span className="font-medium">{leg.to}</span>
-                              </>
-                            ) : (
-                              leg.instruction
-                            )}
-                          </div>
-                          <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                            {leg.lineName && leg.lineName !== leg.mode && <span>{leg.lineName}</span>}
-                            <span>{leg.duration} min</span>
-                            {leg.departureTime && (
-                              <span>{formatTime(leg.departureTime)} – {formatTime(leg.arrivalTime)}</span>
-                            )}
-                          </div>
-                          {leg.instruction && leg.from && leg.instruction !== `${leg.from} to ${leg.to}` && (
-                            <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted-foreground">
-                              {leg.instruction}
-                            </p>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+          return (
+            <Card
+              key={idx}
+              className={idx === 0 ? "relative rounded-3xl border-primary/30 shadow-[0_18px_50px_color-mix(in_oklch,var(--primary)_10%,transparent)]" : "rounded-3xl"}
+            >
+              {idx === 0 && <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-primary/45" />}
+              <CardHeader className="flex-row flex-wrap items-start justify-between gap-4 border-b border-border/70 pb-5">
+                <div className="min-w-0">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    {idx === 0 ? (
+                      <Badge className="bg-primary text-primary-foreground">
+                        <SparklesIcon /> Fastest route
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Option {idx + 1}</Badge>
+                    )}
+                    <Badge variant="outline" className="tabular-nums">
+                      <Clock3Icon /> {journey.duration} min
+                    </Badge>
+                    {formatFare(journey.fare) && (
+                      <Badge variant="success" className="tabular-nums">{formatFare(journey.fare)}</Badge>
+                    )}
+                  </div>
+                  {departure && arrival ? (
+                    <div className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-[-0.035em] tabular-nums sm:text-3xl">
+                      <span>{departure}</span>
+                      <ArrowRightIcon className="size-5 text-muted-foreground" />
+                      <span>{arrival}</span>
+                    </div>
+                  ) : (
+                    <p className="text-xl font-bold tracking-[-0.025em]">Route option {idx + 1}</p>
+                  )}
+                </div>
+                {savePayload && <SaveButton payload={savePayload} />}
+              </CardHeader>
 
-            <JourneyMap legs={journey.legs} userLocation={userLocation} />
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+              <CardContent>
+                <div className="grid items-start gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:gap-6">
+                  <Accordion defaultValue={idx === 0 ? ["steps"] : []}>
+                    <AccordionItem value="steps" className="border-none">
+                      <AccordionTrigger className="rounded-xl bg-muted/55 px-3.5 py-3 text-sm hover:no-underline">
+                        <span className="flex items-center gap-2 font-semibold">
+                          <MapPinnedIcon className="size-4 text-primary" />
+                          {journey.legs.length === 1 ? "1 journey step" : `${journey.legs.length} journey steps`}
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4 pb-0">
+                        <ol>
+                          {journey.legs.map((leg, li) => (
+                            <li key={li} className="relative flex gap-3.5 pb-5 last:pb-1">
+                              {li < journey.legs.length - 1 && (
+                                <span className="absolute top-9 bottom-0 left-[17px] w-px bg-border" />
+                              )}
+                              <span className={`relative z-10 flex size-9 shrink-0 items-center justify-center rounded-xl border ${MODE_STYLES[leg.mode] ?? "border-border bg-muted text-muted-foreground"}`}>
+                                <LegIcon mode={leg.mode} />
+                              </span>
+                              <div className="min-w-0 flex-1 pt-0.5">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                                    {MODE_LABELS[leg.mode] ?? leg.mode}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">{leg.duration} min</span>
+                                </div>
+                                <div className="mt-1 text-sm leading-5 text-foreground">
+                                  {leg.from && leg.to ? (
+                                    <><span className="font-semibold">{leg.from}</span> <span className="text-muted-foreground">to</span> <span className="font-semibold">{leg.to}</span></>
+                                  ) : (
+                                    leg.instruction
+                                  )}
+                                </div>
+                                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                  {leg.lineName && leg.lineName !== leg.mode && <span className="font-medium text-foreground/75">{leg.lineName}</span>}
+                                  {leg.departureTime && <span className="tabular-nums">{formatTime(leg.departureTime)} – {formatTime(leg.arrivalTime)}</span>}
+                                </div>
+                                {leg.instruction && leg.from && leg.instruction !== `${leg.from} to ${leg.to}` && (
+                                  <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-muted-foreground">{leg.instruction}</p>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ol>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+
+                  <JourneyMap legs={journey.legs} userLocation={userLocation} />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </section>
   );
 }
