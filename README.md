@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TrackHopper
 
-## Getting Started
+**AI-powered London commute planner** — plan journeys in plain English, get live TfL status, fares, and step-by-step routes on an interactive map.
 
-First, run the development server:
+🔗 **Live app:** [trackhopper.vercel.app](https://trackhopper.vercel.app)
+
+---
+
+## What it does
+
+TrackHopper helps you get around London without needing to know exact station names or TfL jargon.
+
+- **Ask in plain English** — type something like *"how do I get from Stratford to UEL by 9am"* or *"canary wharf to the shard"* and it figures out what you mean, typos and all
+- **Landmark-aware search** — works with landmarks and informal place names, not just official station names, by combining TfL's station search with OpenStreetMap geocoding
+- **Live line status** — see delays and disruptions across the network at a glance
+- **Interactive map** — every journey result is plotted on a live map, not just a text list
+- **Use my location** — one tap to start planning from wherever you are, with nearby station suggestions
+- **Save your routes** — sign in to save frequent journeys and re-run them in one click
+- **Admin dashboard** — usage stats, saved route activity, and API health monitoring (admin-only)
+
+## Tech stack
+
+| Layer | Tech |
+|---|---|
+| Framework | Next.js 14 (App Router) + TypeScript |
+| Styling | Tailwind CSS |
+| Journey & station data | [TfL Unified API](https://api-portal.tfl.gov.uk) |
+| Natural language parsing | [Pollinations AI](https://pollinations.ai) |
+| Landmark geocoding | OpenStreetMap Nominatim |
+| Maps | Leaflet + React-Leaflet |
+| Database & Auth | Supabase (Postgres + Row Level Security) |
+| Hosting | Vercel |
+
+## How it works
+
+```
+User types a request (free text or structured form)
+        ↓
+Pollinations AI extracts intent: from, to, arrival/departure time
+        ↓
+Place resolution: TfL StopPoint Search → falls back to
+Nominatim geocoding → nearest TfL station lookup
+        ↓
+TfL Journey Planner returns the route(s)
+        ↓
+Results rendered as step-by-step directions + live map
+        ↓
+Optionally saved to Supabase, scoped to the signed-in user via RLS
+```
+
+## Getting started locally
+
+```bash
+git clone https://github.com/Zkyarpan/TrackHopper.git
+cd TrackHopper
+npm install
+cp .env.example .env.local
+```
+
+Fill in `.env.local` with your own keys:
+
+| Variable | Where to get it |
+|---|---|
+| `TFL_APP_KEY` | Register at [api-portal.tfl.gov.uk](https://api-portal.tfl.gov.uk) → Products → subscribe to Unified API |
+| `POLLINATIONS_API_KEY` | Generate at [enter.pollinations.ai](https://enter.pollinations.ai) (use the `sk_` secret key) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase project → Settings → API |
+
+Then run the database migrations in the Supabase SQL editor (see `/supabase/migrations`), and start the dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Database & security notes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- All user data is protected with Postgres Row Level Security — users can only read/write their own saved routes
+- Admin access is gated by an `is_admin` flag on a `profiles` table, checked server-side (not just hidden in the UI)
+- API calls to TfL, Pollinations, and Nominatim are logged for basic health monitoring, visible in the admin dashboard
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## License
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
